@@ -1,0 +1,425 @@
+/* ReelSense Extension Styles */
+
+/* Base Overlay */
+.reelsense-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Nudge Screen */
+.reelsense-nudge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40px;
+  border-radius: 20px;
+  max-width: 500px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.reelsense-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.reelsense-nudge h2 {
+  font-size: 28px;
+  margin: 0 0 15px 0;
+  font-weight: 700;
+}
+
+.reelsense-message {
+  font-size: 18px;
+  margin: 0 0 30px 0;
+  opacity: 0.95;
+  line-height: 1.5;
+}
+
+/* Stats Display */
+.reelsense-stats {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(5px);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 12px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* Actions */
+.reelsense-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.reelsense-btn {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.reelsense-btn.primary {
+  background: white;
+  color: #667eea;
+}
+
+.reelsense-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+}
+
+.reelsense-btn.secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.reelsense-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: white;
+}
+
+/* Pause Screen */
+.reelsense-pause {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  padding: 50px;
+  border-radius: 20px;
+  max-width: 450px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.reelsense-pause h2 {
+  font-size: 32px;
+  margin: 20px 0 15px 0;
+  font-weight: 700;
+}
+
+.reelsense-pause p {
+  font-size: 16px;
+  margin: 0 0 30px 0;
+  opacity: 0.95;
+}
+
+.reelsense-timer {
+  font-size: 72px;
+  font-weight: 800;
+  margin: 30px 0;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.reelsense-hint {
+  font-size: 14px;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.reelsense-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 30px;
+}
+
+.reelsense-progress {
+  height: 100%;
+  background: white;
+  transition: width 1s linear;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* Block Screen */
+.reelsense-block {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  padding: 50px;
+  border-radius: 20px;
+  max-width: 500px;
+  text-align: center;
+  color: #333;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.reelsense-block h2 {
+  font-size: 32px;
+  margin: 20px 0 15px 0;
+  font-weight: 700;
+}
+
+.reelsense-block p {
+  font-size: 16px;
+  margin: 0 0 30px 0;
+}
+
+.reelsense-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 30px 0;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.5);
+  padding: 25px;
+  border-radius: 12px;
+  backdrop-filter: blur(5px);
+}
+
+.stat-number {
+  font-size: 36px;
+  font-weight: 800;
+  color: #fa709a;
+  margin-bottom: 5px;
+}
+
+.stat-desc {
+  font-size: 14px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.reelsense-suggestion {
+  font-style: italic;
+  font-size: 14px;
+  opacity: 0.9;
+  margin: 20px 0;
+}
+
+/* Breathing Exercise */
+.reelsense-breathing {
+  text-align: center;
+  color: white;
+}
+
+.reelsense-breathing h2 {
+  font-size: 32px;
+  margin: 0 0 10px 0;
+  font-weight: 700;
+}
+
+.reelsense-breathing p {
+  font-size: 16px;
+  opacity: 0.8;
+  margin-bottom: 40px;
+}
+
+.breathing-circle {
+  width: 150px;
+  height: 150px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  margin: 0 auto 30px auto;
+  box-shadow: 0 0 40px rgba(102, 126, 234, 0.6);
+  transform: scale(1);
+  transition: transform 4s ease-in-out;
+}
+
+.breathing-text {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 40px;
+  min-height: 30px;
+}
+
+#breathing-skip {
+  margin-top: 20px;
+}
+
+/* --- NEW: AI Feedback Section --- */
+.reelsense-feedback-wrapper {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  /* For .reelsense-block */
+  color: #333;
+}
+
+/* Specific color override for nudge/pause */
+.reelsense-nudge .reelsense-feedback-wrapper,
+.reelsense-pause .reelsense-feedback-wrapper {
+  border-top-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.reelsense-feedback-prompt {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin: 0 0 15px 0;
+}
+
+.reelsense-feedback-thanks {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin: 0;
+  font-style: italic;
+}
+
+.reelsense-feedback-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.reelsense-feedback-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reelsense-feedback-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: white;
+  transform: scale(1.05);
+}
+
+/* Specific button style for .reelsense-block */
+.reelsense-block .reelsense-feedback-btn {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.reelsense-block .reelsense-feedback-btn:hover {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: #333;
+}
+/* --- End of AI Feedback Section --- */
+
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .reelsense-nudge,
+  .reelsense-pause,
+  .reelsense-block {
+    padding: 30px 20px;
+    margin: 20px;
+    max-width: calc(100vw - 40px);
+  }
+  
+  .reelsense-nudge h2,
+  .reelsense-pause h2,
+  .reelsense-block h2 {
+    font-size: 24px;
+  }
+  
+  .reelsense-message,
+  .reelsense-pause p,
+  .reelsense-block p {
+    font-size: 14px;
+  }
+  
+  .reelsense-timer {
+    font-size: 56px;
+  }
+  
+  .reelsense-stats {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .reelsense-actions {
+    flex-direction: column;
+  }
+  
+  .reelsense-btn {
+    width: 100%;
+  }
+  
+  .reelsense-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  /* --- NEW: Responsive AI Feedback --- */
+  .reelsense-feedback-actions {
+    flex-direction: column;
+  }
+  
+  .reelsense-feedback-btn {
+    width: 100%;
+  }
+  /* --- End Responsive AI Feedback --- */
+}
+
+/* Prevent scrolling when overlay is active */
+body.reelsense-active {
+  overflow: hidden;
+}
