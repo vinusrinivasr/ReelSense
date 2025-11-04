@@ -1,4 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-wasm';
 // Attempt to set a backend that works in service workers
 tf.setBackend('wasm').then(() => console.log('ReelSense: TF.js backend set to WASM.'))
   .catch(err => console.error("ReelSense: Failed to set WASM backend:", err));

@@ -68,15 +68,15 @@ async function init() {
   console.log('RS Insta: Initializing script...'); // Log: Start init
 
   settings = await getSettings();
-   if (!settings || Object.keys(settings).length === 0) {
-      console.log('RS Insta: Waiting for settings...');
-      settings = await new Promise(resolve => setTimeout(async () => resolve(await getSettings()), 500));
-      if (!settings || Object.keys(settings).length === 0) {
-          console.error('RS Insta: Failed to load settings. Using fallback.');
-          settings = DEFAULT_SETTINGS;
-      } else {
-          console.log('RS Insta: Settings loaded:', settings); // Log: Settings loaded
-      }
+    if (!settings || Object.keys(settings).length === 0) {
+        console.log('RS Insta: Waiting for settings...');
+        settings = await new Promise(resolve => setTimeout(async () => resolve(await getSettings()), 500));
+        if (!settings || Object.keys(settings).length === 0) {
+            console.error('RS Insta: Failed to load settings. Using fallback.');
+            settings = DEFAULT_SETTINGS;
+        } else {
+            console.log('RS Insta: Settings loaded:', settings); // Log: Settings loaded
+        }
   }
 
   if (!settings.enabled) {
@@ -112,7 +112,7 @@ function getSettings() {
         return;
     }
     chrome.runtime.sendMessage({ action: 'getSettings' }, (response) => {
-       if (chrome.runtime.lastError) {
+        if (chrome.runtime.lastError) {
         console.error("RS Insta: Error getting settings:", chrome.runtime.lastError.message); // Use error log
         resolve({});
       } else {
@@ -123,7 +123,7 @@ function getSettings() {
   });
 }
 
-let videoCheckTimeout = null;
+// let videoCheckTimeout = null; // --- FIX: REMOVED ---
 // Updated startMonitoring (No scroll reporting messages)
 function startMonitoring() {
   console.log('RS Insta: Starting monitoring event listeners.');
@@ -132,50 +132,44 @@ function startMonitoring() {
     if (isBlocked) return;
     if(analyzer) analyzer.recordScroll();
     
-    // ADDED: Trigger video check on scroll with debounce
-    clearTimeout(videoCheckTimeout);
-    videoCheckTimeout = setTimeout(() => {
-      checkVideoChange();
-    }, 300); // Check after scroll settles
+    // --- FIX: Removed debounce. Check video on every scroll event. ---
+    checkVideoChange();
     
     checkIntervention();
   }, { passive: true });
 
   window.addEventListener('touchmove', (e) => {
-     if (isBlocked) return;
-     if(analyzer) analyzer.recordScroll();
-     
-     // ADDED: Also check on touch
-     clearTimeout(videoCheckTimeout);
-     videoCheckTimeout = setTimeout(() => {
-       checkVideoChange();
-     }, 300);
-     
-     checkIntervention();
-   }, { passive: true });
+      if (isBlocked) return;
+      if(analyzer) analyzer.recordScroll();
+      
+      // --- FIX: Removed debounce. ---
+      checkVideoChange();
+      
+      checkIntervention();
+    }, { passive: true });
 
   window.addEventListener('keydown', (e) => {
-     if (isBlocked) return;
+      if (isBlocked) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-       if(analyzer) analyzer.recordScroll();
-       
-       // ADDED: Check on arrow key navigation
-       setTimeout(() => checkVideoChange(), 400);
-       
-       checkIntervention();
+        if(analyzer) analyzer.recordScroll();
+        
+        // --- FIX: Removed timeout. ---
+        checkVideoChange();
+        
+        checkIntervention();
     }
   });
 
   console.log("RS Insta: Performing initial video check on monitoring start.");
   checkVideoChange();
 
-   setInterval(() => {
-     if (!isBlocked) {
-       // ADDED: Periodic check as fallback
-       checkVideoChange();
-       updateStats();
-     }
-   }, 5000);
+    setInterval(() => {
+      if (!isBlocked) {
+        // ADDED: Periodic check as fallback
+        checkVideoChange();
+        updateStats();
+      }
+    }, 5000); // Reduced interval for faster fallback
 }
 
 
@@ -190,7 +184,7 @@ function checkVideoChange() {
     // Use URL ID first, fall back to element-based ID
     const detectedId = videoId || elementBasedId;
     
-    console.log(`RS Insta: URL ID: ${videoId}, Element ID: ${elementBasedId}, Last: ${lastVideoId}`);
+    // console.log(`RS Insta: URL ID: ${videoId}, Element ID: ${elementBasedId}, Last: ${lastVideoId}`); // DEBUG
 
     if (detectedId && detectedId !== lastVideoId) {
         console.log(`RS Insta: New Video ID detected: ${detectedId}`);
@@ -201,14 +195,13 @@ function checkVideoChange() {
         if (analyzer) {
             analyzer.recordVideoView(detectedId, genre);
         } else {
-             console.error("RS Insta: Analyzer not initialized!");
+            console.error("RS Insta: Analyzer not initialized!");
         }
     } else if (!detectedId && lastVideoId) {
         console.log(`RS Insta: Navigated away from reel ${lastVideoId}`);
         lastVideoId = null;
     } else if (detectedId && detectedId === lastVideoId) {
-         // CHANGED: Removed the analyzer check here - it was causing duplicates
-         console.log("RS Insta: Same video ID, no action needed");
+       // console.log("RS Insta: Same video ID, no action needed"); // DEBUG
     }
 }
 
@@ -225,8 +218,8 @@ function getCurrentVideoElement() {
     const selectors = [
         'article video[playsinline]', // Most common
         'div[role="dialog"] video',   // Modal view
-        'main video[playsinline]',     // Main feed
-        'video[playsinline]'           // Fallback
+        'main video[playsinline]',    // Main feed
+        'video[playsinline]'          // Fallback
     ];
     
     let bestVideo = null;
@@ -241,9 +234,9 @@ function getCurrentVideoElement() {
             
             // Video must be significantly visible
             const isVisible = rect.bottom > 50 && 
-                             rect.top < window.innerHeight - 50 && 
-                             rect.height > 100 &&
-                             rect.width > 100; // Also check width
+                                rect.top < window.innerHeight - 50 && 
+                                rect.height > 100 &&
+                                rect.width > 100; // Also check width
             
             if (isVisible) {
                 // Find video closest to center of viewport
@@ -264,11 +257,11 @@ function getCurrentVideoElement() {
         }
     }
     
-    if (bestVideo) {
-        console.log("RS Insta: Found video element, distance from center:", minDistance);
-    } else {
-        console.log("RS Insta: No suitable video element found");
-    }
+    // if (bestVideo) {
+    //     console.log("RS Insta: Found video element, distance from center:", minDistance);
+    // } else {
+    //     console.log("RS Insta: No suitable video element found");
+    // }
     
     return bestVideo;
   } catch (e) { 
@@ -285,8 +278,8 @@ function detectGenre(videoElement) {
     if (!container) { /* console.log("RS Insta: Genre container not found"); */ return 'unknown'; } // Minor log added
     const captionElement = container.querySelector('h1, span[dir="auto"], div[role="caption"]');
     let textContent = (captionElement?.textContent || container.textContent || '').toLowerCase();
-     const hashtagElements = container.querySelectorAll('a[href*="/explore/tags/"]');
-     hashtagElements.forEach(tag => { textContent += ' ' + (tag.textContent || '').replace('#', '').toLowerCase(); });
+      const hashtagElements = container.querySelectorAll('a[href*="/explore/tags/"]');
+      hashtagElements.forEach(tag => { textContent += ' ' + (tag.textContent || '').replace('#', '').toLowerCase(); });
 
     if (textContent.includes('comedy') || textContent.includes('funny') || textContent.includes('😂')) return 'comedy';
     if (textContent.includes('dance') || textContent.includes('💃')) return 'dance';
@@ -313,13 +306,13 @@ function triggerIntervention(result) {
   console.log("RS Insta: Triggering intervention:", result.reason); // Log: Triggering
   isBlocked = true;
   if(analyzer) analyzer.recordIntervention();
-   if (!chrome.runtime?.id) { console.error("RS Insta: Cannot trigger intervention, runtime invalid."); return; } // Error log
+    if (!chrome.runtime?.id) { console.error("RS Insta: Cannot trigger intervention, runtime invalid."); return; } // Error log
 
   chrome.runtime.sendMessage({ action: 'recordIntervention', platform: 'instagram', type: result.reason },
-   response => { if (chrome.runtime.lastError) console.error("RS Insta Err (recordIntervention):", chrome.runtime.lastError.message); }); // Error log
+    response => { if (chrome.runtime.lastError) console.error("RS Insta Err (recordIntervention):", chrome.runtime.lastError.message); }); // Error log
 
   chrome.runtime.sendMessage({ action: 'updateStats', platform: 'instagram', data: { mindlessScore: result.score } },
-   response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateScore):", chrome.runtime.lastError.message); }); // Error log
+    response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateScore):", chrome.runtime.lastError.message); }); // Error log
 
 
   if (settings.interventionType === 'block') showBlockScreen(result);
@@ -344,7 +337,7 @@ function getFeedbackUI(features) {
       const label = parseInt(button.dataset.label, 10);
       console.log("RS Insta: Sending feedback - Label:", label, "Features:", features); // Log: Feedback sent
       if (chrome.runtime?.id) {
-         chrome.runtime.sendMessage({ action: 'logTrainingData', features: features, label: label },
+          chrome.runtime.sendMessage({ action: 'logTrainingData', features: features, label: label },
           response => {
               if (chrome.runtime.lastError) console.error("RS Insta Err (logTrainingData):", chrome.runtime.lastError.message); // Error log
               else console.log("RS Insta: Feedback message sent successfully."); // Log: Feedback success
@@ -362,7 +355,11 @@ function getFeedbackUI(features) {
 function showNudge(result) {
   console.log("RS Insta: Showing Nudge"); // Log: Show UI
   const overlay = createOverlay('nudge');
-  const messages = { /* ... */ };
+  const messages = {
+     mindless_score: [ "You're scrolling on autopilot. Time to reset?" ],
+     genre_fatigue: [ `Watched ${result.details?.count || '?'} similar videos. Ready for something new?` ],
+     ai_model: [ "ReelSense AI noticed a mindless pattern. Time for a quick break?" ]
+  };
   const messageList = messages[result.reason] || messages.mindless_score;
   const message = messageList[Math.floor(Math.random() * messageList.length)];
   const currentStats = analyzer ? analyzer.getStats() : { videosWatched: 'N/A', scrollSpeed: 'N/A' }; // Use videosWatched
@@ -400,17 +397,28 @@ function showNudge(result) {
       isBlocked = false; if(analyzer) analyzer.resetSession();
   });
   document.getElementById('reelsense-take-break').addEventListener('click', () => {
-       console.log("RS Insta: Nudge - Take Break clicked"); // Log: Action
+      console.log("RS Insta: Nudge - Take Break clicked"); // Log: Action
       if (document.getElementById('reelsense-overlay') === overlay) overlay.remove();
       showBreathingExercise();
   });
 }
 
 function showPauseScreen(result) {
-   console.log("RS Insta: Showing Pause Screen"); // Log: Show UI
+    console.log("RS Insta: Showing Pause Screen"); // Log: Show UI
   const overlay = createOverlay('pause');
   const duration = settings.pauseDuration || 60;
-  overlay.innerHTML = `...`; // Same HTML as before
+  overlay.innerHTML = `
+    <div class="reelsense-pause">
+      <div class="reelsense-icon">⏸️</div>
+      <h2>Mindful Pause</h2>
+      <p>Your attention deserves a break. Let's reset.</p>
+      <div class="reelsense-timer" id="reelsense-timer">${duration}</div>
+      <p class="reelsense-hint">Stretch, breathe, or look at something 20 feet away.</p>
+      <div class="reelsense-progress-bar">
+        <div class="reelsense-progress" id="reelsense-progress" style="width: 0%;"></div>
+      </div>
+    </div>
+  `; 
 
   const pauseBox = overlay.querySelector('.reelsense-pause');
   if (pauseBox && result.details) pauseBox.appendChild(getFeedbackUI(result.details));
@@ -426,8 +434,8 @@ function showPauseScreen(result) {
     if (progressEl) progressEl.style.width = ((duration - remaining) / duration * 100) + '%';
     if (remaining <= 0) {
       clearInterval(timer);
-       console.log("RS Insta: Pause timer finished"); // Log: Action
-       if (document.getElementById('reelsense-overlay') === overlay) overlay.remove();
+        console.log("RS Insta: Pause timer finished"); // Log: Action
+        if (document.getElementById('reelsense-overlay') === overlay) overlay.remove();
       document.body.classList.remove('reelsense-active');
       isBlocked = false;
       if(analyzer) analyzer.resetSession();
@@ -436,7 +444,7 @@ function showPauseScreen(result) {
 }
 
 function showBlockScreen(result) {
-   console.log("RS Insta: Showing Block Screen"); // Log: Show UI
+    console.log("RS Insta: Showing Block Screen"); // Log: Show UI
   const overlay = createOverlay('block');
   const currentStats = analyzer ? analyzer.getStats() : { videosWatched: 'N/A', sessionDuration: 'N/A' };
   overlay.innerHTML = `
@@ -464,15 +472,23 @@ function showBlockScreen(result) {
   document.body.classList.add('reelsense-active');
 
   document.getElementById('reelsense-end-session').addEventListener('click', () => {
-     console.log("RS Insta: Block - End Session clicked"); // Log: Action
+      console.log("RS Insta: Block - End Session clicked"); // Log: Action
     window.location.href = 'https://www.instagram.com/';
   });
 }
 
 function showBreathingExercise() {
-   console.log("RS Insta: Showing Breathing Exercise"); // Log: Show UI
+    console.log("RS Insta: Showing Breathing Exercise"); // Log: Show UI
   const overlay = createOverlay('breathing');
-  overlay.innerHTML = `...`; // Same HTML as before
+  overlay.innerHTML = `
+    <div class="reelsense-breathing">
+      <h2>Breathing Exercise</h2>
+      <p>Follow the circle rhythm</p>
+      <div class="breathing-circle" id="breathing-circle" style="transform: scale(1);"></div>
+      <div class="breathing-text" id="breathing-text">Breathe In</div>
+      <button class="reelsense-btn secondary" id="breathing-skip">Skip</button>
+    </div>
+  `;
   document.body.appendChild(overlay);
   document.body.classList.add('reelsense-active');
 
@@ -490,7 +506,24 @@ function showBreathingExercise() {
       console.log("RS Insta: Breathing exercise ended/skipped"); // Log: Action
   }
 
-  function breathingCycle() { /* ... Same logic as before ... */ }
+  function breathingCycle() { 
+    if (!text || !circle || !document.body.contains(overlay)) { cleanupBreathing(); return; };
+    text.textContent = 'Breathe In';
+    circle.style.transform = 'scale(1.5)';
+    circle.style.transition = 'transform 4s ease-in-out';
+    animationTimeout1 = setTimeout(() => {
+      if (text) text.textContent = 'Hold';
+      animationTimeout2 = setTimeout(() => {
+        if (text) text.textContent = 'Breathe Out';
+        if (circle) circle.style.transform = 'scale(1)';
+        animationTimeout3 = setTimeout(() => {
+          cycle++;
+          if (cycle < maxCycles) breathingCycle();
+          else cleanupBreathing();
+        }, 2000);
+      }, 2000);
+    }, 4000);
+  }
 
   breathingCycle();
   document.getElementById('breathing-skip').addEventListener('click', cleanupBreathing);
@@ -512,7 +545,7 @@ function createOverlay(type) {
 function updateStats() {
     if (chrome.runtime?.id) {
         chrome.runtime.sendMessage({ action: 'updateStats', platform: 'instagram', data: { time: 5 } },
-         response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateTime):", chrome.runtime.lastError.message); }); // Error log
+          response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateTime):", chrome.runtime.lastError.message); }); // Error log
     }
 }
 
@@ -522,16 +555,21 @@ function observeNavigation() {
   console.log("RS Insta: Starting navigation observer. Initial URL:", lastUrl); // Log: Observer Start
 
   navigationObserver = new MutationObserver(() => {
-     window.requestAnimationFrame(() => { // Debounce
+      window.requestAnimationFrame(() => { // Debounce
         const currentUrl = location.href;
         if (currentUrl !== lastUrl) {
             const oldUrl = lastUrl;
             lastUrl = currentUrl;
             console.log(`RS Insta: URL changed via MutationObserver from ${oldUrl} to ${currentUrl}`); // Log: URL Change
 
-            const oldOverlay = document.getElementById('reelsense-overlay');
-            if (oldOverlay) oldOverlay.remove();
-            document.body.classList.remove('reelsense-active');
+            // --- THIS IS THE FIX ---
+            // Only remove the overlay if an intervention is NOT active
+            if (!isBlocked) {
+                const oldOverlay = document.getElementById('reelsense-overlay');
+                if (oldOverlay) oldOverlay.remove();
+                document.body.classList.remove('reelsense-active');
+            }
+            // --- END FIX ---
 
             if (isOnReelsPage()) {
                 console.log('RS Insta: Navigated within Reels context');
@@ -542,28 +580,37 @@ function observeNavigation() {
             } else {
                 console.log('RS Insta: Navigated away from Reels');
                 lastVideoId = null;
-                 if(analyzer) analyzer.resetSession();
+                if(analyzer) analyzer.resetSession();
             }
         }
-     });
+      });
   });
 
   navigationObserver.observe(document.body, { subtree: true, childList: true });
 
-   window.addEventListener('popstate', () => {
-       console.log('RS Insta: Popstate event detected'); // Log: Popstate
-       setTimeout(() => {
-           lastUrl = document.location.href;
+    window.addEventListener('popstate', () => {
+        console.log('RS Insta: Popstate event detected'); // Log: Popstate
+        setTimeout(() => {
+            lastUrl = document.location.href;
             console.log("RS Insta: URL after popstate:", lastUrl); // Log: URL after popstate
-           checkVideoChange();
+            
+            // --- THIS IS THE FIX ---
+            if (!isBlocked) {
+                const oldOverlay = document.getElementById('reelsense-overlay');
+                if (oldOverlay) oldOverlay.remove();
+                document.body.classList.remove('reelsense-active');
+            }
+            // --- END FIX ---
+
+            checkVideoChange();
             if (isOnReelsPage()) {
-               if (!analyzer) { console.log("RS Insta: Analyzer missing after popstate, re-initializing."); init(); } // Log: Re-init
-               else { analyzer.resetSession(); }
-           } else {
-               if(analyzer) analyzer.resetSession();
-           }
-       }, 50);
-   });
+                if (!analyzer) { console.log("RS Insta: Analyzer missing after popstate, re-initializing."); init(); } // Log: Re-init
+                else { analyzer.resetSession(); }
+            } else {
+                if(analyzer) analyzer.resetSession();
+            }
+        }, 50);
+    });
 }
 
 
@@ -601,79 +648,67 @@ class BehaviorAnalyzer {
         this.updateMindlessScore();
     }
 
-    // Updated recordVideoView - sends 'videos: 1' for INSTAGRAM
+    // --- FIX: This is the new, corrected logic ---
     recordVideoView(videoId, genre = 'unknown') {
-    console.log(`RS Insta: Recording view for videoId: ${videoId}`);
-    const now = Date.now();
-    
-    // CHANGED: Better handling of video transitions
-    if (this.currentVideoId && this.currentVideoId !== videoId) {
-        // We're switching to a NEW video, so record the PREVIOUS one
-        const watchTime = (now - this.currentVideoStartTime) / 1000;
-        
-        if (watchTime > 0.5) { // Increased from 0.1 to 0.5 to avoid micro-views
-            this.videoHistory.push({ 
-                id: this.currentVideoId, 
-                watchTime: watchTime, 
-                genre: this.currentVideoGenre, 
-                timestamp: this.currentVideoStartTime 
-            });
-            
-            console.log(`RS Insta: Logged ${watchTime.toFixed(1)}s for previous video ${this.currentVideoId}`);
-            
-            if (this.videoHistory.length > 50) this.videoHistory.shift();
-            
-            // Send stat update for PREVIOUS video
-            if (chrome.runtime?.id) {
-                console.log("RS Insta: Sending 'videos: 1' for previous video");
-                chrome.runtime.sendMessage(
-                    { action: 'updateStats', platform: 'instagram', data: { videos: 1 } },
-                    response => { 
-                        if (chrome.runtime.lastError) {
-                            console.error("RS Insta Err:", chrome.runtime.lastError.message);
-                        } else {
-                            console.log("RS Insta: Video count updated successfully");
-                        }
-                    }
-                );
-            }
-        } else {
-            console.log(`RS Insta: Ignoring very short view (${watchTime.toFixed(1)}s)`);
-        }
-    } else if (!this.currentVideoId) {
-        // FIRST video ever
-        console.log(`RS Insta: First video recorded: ${videoId}`);
-        
-        if (chrome.runtime?.id) {
-            console.log("RS Insta: Sending 'videos: 1' for first video");
-            chrome.runtime.sendMessage(
-                { action: 'updateStats', platform: 'instagram', data: { videos: 1 } },
-                response => { 
-                    if (chrome.runtime.lastError) {
-                        console.error("RS Insta Err:", chrome.runtime.lastError.message);
-                    }
-                }
-            );
-        }
-    } else if (this.currentVideoId === videoId) {
-        // SAME video being re-detected - don't count again!
-        console.log(`RS Insta: Same video ${videoId} - no duplicate count`);
-        return; // Exit early to prevent duplicate counting
+      console.log(`RS Insta: Recording view for videoId: ${videoId}`);
+      const now = Date.now();
+      
+      // 1. Log watch time for the PREVIOUS video (if there was one)
+      if (this.currentVideoId && this.currentVideoId !== videoId) {
+          const watchTime = (now - this.currentVideoStartTime) / 1000;
+          
+          if (watchTime > 0.5) { // Increased from 0.1 to 0.5 to avoid micro-views
+              this.videoHistory.push({ 
+                  id: this.currentVideoId, 
+                  watchTime: watchTime, 
+                  genre: this.currentVideoGenre, 
+                  timestamp: this.currentVideoStartTime 
+              });
+              
+              console.log(`RS Insta: Logged ${watchTime.toFixed(1)}s for previous video ${this.currentVideoId}`);
+              
+              if (this.videoHistory.length > 50) this.videoHistory.shift();
+
+          } else {
+              console.log(`RS Insta: Ignoring very short view (${watchTime.toFixed(1)}s)`);
+          }
+      }
+
+      // 2. Count the NEW video *immediately*
+      // We check this.currentVideoId !== videoId to prevent double counting
+      if (this.currentVideoId !== videoId) {
+          console.log("RS Insta: Sending 'videos: 1' for NEW video:", videoId);
+          if (chrome.runtime?.id) {
+              chrome.runtime.sendMessage(
+                  { action: 'updateStats', platform: 'instagram', data: { videos: 1 } },
+                  response => { 
+                      if (chrome.runtime.lastError) {
+                          console.error("RS Insta Err:", chrome.runtime.lastError.message);
+                      } else {
+                          console.log("RS Insta: Video count updated successfully");
+                      }
+                  }
+              );
+          }
+      } else {
+          // This is a re-detection of the same video. Don't do anything.
+          console.log(`RS Insta: Same video ${videoId} - no duplicate count`);
+          return; // Exit
+      }
+      
+      // 3. Update state to the new video
+      this.currentVideoStartTime = now;
+      this.currentVideoId = videoId;
+      this.currentVideoGenre = genre;
+      
+      this.genreSequence.push(genre);
+      if (this.genreSequence.length > 30) this.genreSequence.shift();
+      
+      this.calculateMetrics();
+      this.updateMindlessScore();
+      
+      console.log(`RS Insta: State updated. Score: ${this.mindlessScore}, Videos: ${this.videoHistory.length}`);
     }
-    
-    // Update current video state
-    this.currentVideoStartTime = now;
-    this.currentVideoId = videoId;
-    this.currentVideoGenre = genre;
-    
-    this.genreSequence.push(genre);
-    if (this.genreSequence.length > 30) this.genreSequence.shift();
-    
-    this.calculateMetrics();
-    this.updateMindlessScore();
-    
-    console.log(`RS Insta: State updated. Score: ${this.mindlessScore}, Videos: ${this.videoHistory.length + 1}`);
-}
 
     calculateMetrics() {
         if (this.videoHistory.length === 0) { this.avgWatchTime = 0; this.skipRate = 0; this.genreDiversity = 1; return; };
@@ -685,7 +720,7 @@ class BehaviorAnalyzer {
         const recentSequence = this.genreSequence.slice(-20);
         if (recentSequence.length > 0) {
             const uniqueGenres = new Set(recentSequence.filter(g => g && g !== 'unknown' && g !== 'general')).size;
-             this.genreDiversity = recentSequence.length > 0 ? uniqueGenres / recentSequence.length : 1; // Avoid div by zero
+                this.genreDiversity = recentSequence.length > 0 ? uniqueGenres / recentSequence.length : 1; // Avoid div by zero
         } else { this.genreDiversity = 1; }
         // console.log(`RS Insta Metrics: AvgW=${this.avgWatchTime.toFixed(1)}, SkipR=${this.skipRate.toFixed(2)}, GenDiv=${this.genreDiversity.toFixed(2)}`); // Noisy log
     }
@@ -714,30 +749,28 @@ class BehaviorAnalyzer {
     const speedThreshold = this.settings?.scrollSpeedThreshold || 5;
     const minWatch = this.settings?.minWatchTime || 3;
 
-    // --- LOGGING ---
     const scrollFactor = speedThreshold > 0 ? Math.min(2, this.scrollSpeed / speedThreshold) : (this.scrollSpeed > 0 ? 2 : 0);
     const scrollSpeedScore = Math.min(30, scrollFactor * 15);
     score += scrollSpeedScore;
-    console.log(`RS ScoreCalc: ScrollSpeed=${this.scrollSpeed.toFixed(1)}, Threshold=${speedThreshold}, ScorePart=${scrollSpeedScore.toFixed(1)}`);
+    // console.log(`RS ScoreCalc: ScrollSpeed=${this.scrollSpeed.toFixed(1)}, Threshold=${speedThreshold}, ScorePart=${scrollSpeedScore.toFixed(1)}`);
 
     const skipRateScore = this.skipRate * 25;
     score += skipRateScore;
-    console.log(`RS ScoreCalc: SkipRate=${this.skipRate.toFixed(2)}, ScorePart=${skipRateScore.toFixed(1)}`);
+    // console.log(`RS ScoreCalc: SkipRate=${this.skipRate.toFixed(2)}, ScorePart=${skipRateScore.toFixed(1)}`);
 
     const watchTimeScore = this.avgWatchTime < minWatch ? 20 : Math.max(0, 20 * (1 - this.avgWatchTime / (minWatch * 2)));
     const watchTimeScoreCapped = Math.min(20, watchTimeScore); // Apply cap
     score += watchTimeScoreCapped;
-    console.log(`RS ScoreCalc: AvgWatch=${this.avgWatchTime.toFixed(1)}, MinWatch=${minWatch}, ScorePart=${watchTimeScoreCapped.toFixed(1)}`);
+    // console.log(`RS ScoreCalc: AvgWatch=${this.avgWatchTime.toFixed(1)}, MinWatch=${minWatch}, ScorePart=${watchTimeScoreCapped.toFixed(1)}`);
 
     const diversityScore = (1 - this.genreDiversity) * 15;
     score += diversityScore;
-    console.log(`RS ScoreCalc: GenreDiversity=${this.genreDiversity.toFixed(2)}, ScorePart=${diversityScore.toFixed(1)}`);
+    // console.log(`RS ScoreCalc: GenreDiversity=${this.genreDiversity.toFixed(2)}, ScorePart=${diversityScore.toFixed(1)}`);
 
     const sessionMinutes = (Date.now() - this.sessionStartTime) / 60000;
     const sessionScore = Math.min(10, (sessionMinutes / 30) * 10);
     score += sessionScore;
-    console.log(`RS ScoreCalc: SessionMins=${sessionMinutes.toFixed(1)}, ScorePart=${sessionScore.toFixed(1)}`);
-    // --- END LOGGING ---
+    // console.log(`RS ScoreCalc: SessionMins=${sessionMinutes.toFixed(1)}, ScorePart=${sessionScore.toFixed(1)}`);
 
     this.mindlessScore = Math.round(Math.max(0, Math.min(100, score)));
     console.log(`RS ScoreCalc: FINAL SCORE = ${this.mindlessScore}`); // Log final score
@@ -777,8 +810,8 @@ class BehaviorAnalyzer {
                     }
 
                     if (chrome.runtime.lastError) {
-                         console.error("RS Insta: Error getting prediction:", chrome.runtime.lastError.message); // Error log
-                         this.checkHeuristicsAndTrigger(currentFeatures); return; // Fallback
+                        console.error("RS Insta: Error getting prediction:", chrome.runtime.lastError.message); // Error log
+                        this.checkHeuristicsAndTrigger(currentFeatures); return; // Fallback
                     }
                     if (response?.success && typeof response.prediction === 'number') {
                         const prediction = response.prediction; const predictionThreshold = 0.75;
@@ -795,8 +828,8 @@ class BehaviorAnalyzer {
             );
             return { shouldIntervene: false, reason: 'checking_async' }; // Indicate async
         } else {
-             console.error("RS Insta: Runtime not available, falling back immediately."); // Error log
-             return this.checkHeuristics(currentFeatures); // Sync fallback
+            console.error("RS Insta: Runtime not available, falling back immediately."); // Error log
+            return this.checkHeuristics(currentFeatures); // Sync fallback
         }
     }
 
@@ -813,7 +846,7 @@ class BehaviorAnalyzer {
     // *** ***
 
     if (fatigue.fatigued) {
-         console.log(`RS Heuristic Trigger (Fatigue: ${fatigue.genre} x${fatigue.count})`);
+        console.log(`RS Heuristic Trigger (Fatigue: ${fatigue.genre} x${fatigue.count})`);
         return { shouldIntervene: true, reason: 'genre_fatigue', score: this.mindlessScore, details: { ...currentFeatures, genre: fatigue.genre, count: fatigue.count } };
     }
     // const threshold = this.settings?.mindlessThreshold || 70; // Defined above
@@ -825,17 +858,17 @@ class BehaviorAnalyzer {
     }
 
     // Helper called from async response or sync fallback
-     checkHeuristicsAndTrigger(currentFeatures) {
-         // Re-check cooldown
-         const now = Date.now();
-         if ((now - this.lastInterventionTime) / 1000 < 300) { console.log("RS Insta: Cooldown active after async check."); return; }; // Log: Cooldown active
-         const heuristicResult = this.checkHeuristics(currentFeatures);
-         if (heuristicResult.shouldIntervene) {
-             triggerIntervention(heuristicResult);
-         } else {
-             console.log("RS Insta: No intervention needed after checks."); // Log: No trigger needed
-         }
-     }
+      checkHeuristicsAndTrigger(currentFeatures) {
+          // Re-check cooldown
+          const now = Date.now();
+          if ((now - this.lastInterventionTime) / 1000 < 300) { console.log("RS Insta: Cooldown active after async check."); return; }; // Log: Cooldown active
+          const heuristicResult = this.checkHeuristics(currentFeatures);
+          if (heuristicResult.shouldIntervene) {
+              triggerIntervention(heuristicResult);
+          } else {
+              console.log("RS Insta: No intervention needed after checks."); // Log: No trigger needed
+          }
+      }
 
     recordIntervention() { this.lastInterventionTime = Date.now(); }
 
@@ -844,7 +877,7 @@ class BehaviorAnalyzer {
         return {
             mindlessScore: this.mindlessScore,
             scrollSpeed: this.scrollSpeed.toFixed(2),
-            videosWatched: this.videoHistory.length, // Use history length for "Reels Scrolled"
+            videosWatched: this.videoHistory.length + (this.currentVideoId ? 1 : 0), // --- FIX: Include current video in count ---
             avgWatchTime: this.avgWatchTime.toFixed(1),
             skipRate: (this.skipRate * 100).toFixed(0),
             genreDiversity: (this.genreDiversity * 100).toFixed(0),
@@ -855,11 +888,16 @@ class BehaviorAnalyzer {
     resetSession() {
         console.log("RS Insta: Resetting session state."); // Log: Reset session
         this.scrollEvents = [];
+        this.videoHistory = []; // --- FIX: Clear history on reset ---
+        this.genreSequence = []; // --- FIX: Clear genres on reset ---
         this.sessionStartTime = Date.now();
         this.currentVideoStartTime = null;
         this.currentVideoId = null;
         this.currentVideoGenre = null;
         this.mindlessScore = 0;
+        this.avgWatchTime = 0; // --- FIX: Reset metrics ---
+        this.skipRate = 0; // --- FIX: Reset metrics ---
+        this.genreDiversity = 1; // --- FIX: Reset metrics ---
         // Keep lastInterventionTime
     }
 }

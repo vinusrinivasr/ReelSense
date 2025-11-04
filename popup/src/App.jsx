@@ -1,5 +1,4 @@
-import React,
-{ useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart } from 'react-minimal-pie-chart'; // Import PieChart
 import './popup.css'; // Import the updated CSS
 
@@ -55,8 +54,8 @@ function App() {
     const newSettings = { ...settings };
     if (chrome.storage?.local) {
       chrome.storage.local.set({ settings: newSettings }, () => {
-           if (chrome.runtime.lastError) showNotification('Error saving.');
-           else showNotification('Settings Saved!');
+          if (chrome.runtime.lastError) showNotification('Error saving.');
+          else showNotification('Settings Saved!');
       });
     } else { showNotification('Settings Saved! (Local)'); }
   };
@@ -76,24 +75,27 @@ function App() {
     setTimeout(() => setNotification(''), 2000);
   };
 
-   // Handle AI Model Training Request
-   const handleTrainModel = () => {
-     if (chrome.runtime?.sendMessage) {
-        showNotification('AI Training started...');
-        chrome.runtime.sendMessage({ action: 'TRAIN_MODEL' }, (response) => {
-          if (chrome.runtime.lastError) { showNotification('Error starting.'); return; }
-          if (response?.success) showNotification(response.message || 'Training complete!');
-          else showNotification(response?.error || 'Training failed.');
-        });
-     } else { showNotification("Cannot train model now."); }
-    };
+  // Handle AI Model Training Request
+  const handleTrainModel = () => {
+    if (chrome.runtime?.sendMessage) {
+      showNotification('AI Training started...');
+      chrome.runtime.sendMessage({ action: 'TRAIN_MODEL' }, (response) => {
+        if (chrome.runtime.lastError) { showNotification('Error starting.'); return; }
+        if (response?.success) showNotification(response.message || 'Training complete!');
+        else showNotification(response?.error || 'Training failed.');
+      });
+    } else { showNotification("Cannot train model now."); }
+  };
 
   // Calculate displayed values
   const ytVideos = stats.youtube?.videos || 0;
   const igVideos = stats.instagram?.videos || 0;
   const totalVideosScrolled = ytVideos + igVideos;
-  const totalTime = Math.round(((stats.instagram?.time || 456) + (stats.youtube?.time || 641)) / 60);
-  const totalInterventions = (stats.instagram?.interventions || 1) + (stats.youtube?.interventions || 2);
+  
+  // --- FIX ---
+  // Replaced hardcoded numbers with 0
+  const totalTime = Math.round(((stats.instagram?.time || 0) + (stats.youtube?.time || 0)) / 60);
+  const totalInterventions = (stats.instagram?.interventions || 0) + (stats.youtube?.interventions || 0);
   const avgMindfulnessScore = 100 - (stats.highestMindlessScore || 0);
 
   // Prepare data for the pie chart (uses the updated color constants)
@@ -128,14 +130,14 @@ function App() {
               <div className="stat-value">{totalTime}m</div>
               <div className="stat-label">Time Spent</div>
             </div>
-             <div className="stat-card">
+              <div className="stat-card">
               <div className="stat-value">{totalInterventions}</div>
               <div className="stat-label">Interventions</div>
             </div>
-             <div className="stat-card">
-               <div className="stat-value">{avgMindfulnessScore}%</div>
-               <div className="stat-label">Mindfulness Score</div>
-             </div>
+              <div className="stat-card">
+                <div className="stat-value">{avgMindfulnessScore}%</div>
+                <div className="stat-label">Mindfulness Score</div>
+              </div>
           </div>
 
           {/* Pie Chart Section */}
@@ -155,7 +157,7 @@ function App() {
                     </div>
                   )}
                   {igVideos > 0 && (
-                     <div className="legend-item">
+                      <div className="legend-item">
                       <div className="legend-color-box" style={{ backgroundColor: INSTAGRAM_COLOR }}></div>
                       <span className="legend-label">Instagram Reels</span>
                       <span className="legend-value">{igPercentage}% ({igVideos})</span>
@@ -172,16 +174,18 @@ function App() {
             <div className="platform-header"> <img src="/icons/youtube.svg" alt="YouTube Icon" className="platform-svg-icon" /> <span className="platform-name">YouTube Shorts</span> </div>
             <div className="platform-details">
               <span>{ytVideos} Shorts Scrolled</span>
-              <span>{Math.round((stats.youtube?.time || 456) / 60)} min</span>
-              <span>{stats.youtube?.interventions || 2} nudges</span>
+              {/* --- FIX --- */}
+              <span>{Math.round((stats.youtube?.time || 0) / 60)} min</span>
+              <span>{stats.youtube?.interventions || 0} nudges</span>
             </div>
           </div>
           <div className="platform-stats">
-             <div className="platform-header"> <img src="/icons/instagram.svg" alt="Instagram Icon" className="platform-svg-icon" /> <span className="platform-name">Instagram Reels</span> </div>
+              <div className="platform-header"> <img src="/icons/instagram.svg" alt="Instagram Icon" className="platform-svg-icon" /> <span className="platform-name">Instagram Reels</span> </div>
             <div className="platform-details">
               <span>{igVideos} Reels Scrolled</span>
-              <span>{Math.round((stats.instagram?.time || 641) / 60)} min</span>
-              <span>{stats.instagram?.interventions || 1} nudges</span>
+              {/* --- FIX --- */}
+              <span>{Math.round((stats.instagram?.time || 0) / 60)} min</span>
+              <span>{stats.instagram?.interventions || 0} nudges</span>
             </div>
           </div>
         </div> {/* End Main Content */}

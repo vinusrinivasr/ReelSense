@@ -83,22 +83,22 @@ function startMonitoring() {
   }, { passive: true });
 
   window.addEventListener('touchmove', (e) => {
-     if (isBlocked) return;
-     if(analyzer) analyzer.recordScroll();
-     checkIntervention();
-   }, { passive: true });
+      if (isBlocked) return;
+      if(analyzer) analyzer.recordScroll();
+      checkIntervention();
+    }, { passive: true });
 
   window.addEventListener('keydown', (e) => {
     if (isBlocked) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-       // *** REMOVED scroll sending logic ***
-       if(analyzer) analyzer.recordScroll(); // Still needed for score
-       checkIntervention();
+        // *** REMOVED scroll sending logic ***
+        if(analyzer) analyzer.recordScroll(); // Still needed for score
+        checkIntervention();
     }
     // Handle spacebar/k for score calculation
     else if (e.key === 'k' || e.key === ' ') {
-         if(analyzer) analyzer.recordScroll(); // Still record for score calculation
-         checkIntervention();
+        if(analyzer) analyzer.recordScroll(); // Still record for score calculation
+        checkIntervention();
     }
   });
 
@@ -106,11 +106,11 @@ function startMonitoring() {
   checkVideoChange();
 
   // Periodic time update remains
-   setInterval(() => {
-     if (!isBlocked) {
-       updateStats();
-     }
-   }, 5000);
+    setInterval(() => {
+      if (!isBlocked) {
+        updateStats();
+      }
+    }, 5000);
 }
 
 
@@ -133,11 +133,7 @@ function checkVideoChange() {
         console.log(`ReelSense: Navigated away from specific short ${lastVideoId}`);
         lastVideoId = null;
     } else if (videoId && videoId === lastVideoId) {
-        // Only record if analyzer exists and hasn't recorded this video yet
-        if (analyzer && analyzer.currentVideoId !== videoId) {
-             const genre = detectGenre();
-             analyzer.recordVideoView(videoId, genre);
-        }
+        // This is fine, the recordVideoView function will prevent double-counting
     }
 }
 
@@ -228,7 +224,7 @@ function getFeedbackUI(features) {
       const label = parseInt(button.dataset.label, 10);
       if (chrome.runtime?.id) {
         chrome.runtime.sendMessage({ action: 'logTrainingData', features: features, label: label },
-         response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
+          response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
 
       }
       feedbackWrapper.innerHTML = `<p class="reelsense-feedback-thanks">Thanks for the feedback!</p>`;
@@ -433,7 +429,7 @@ function createOverlay(type) {
 function updateStats() {
     if (chrome.runtime?.id) {
         chrome.runtime.sendMessage({ action: 'updateStats', platform: 'youtube', data: { time: 5 } },
-         response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
+          response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
     }
 }
 
@@ -445,9 +441,16 @@ function observeNavigation() {
         if (currentUrl !== lastUrl) {
             const oldUrl = lastUrl; lastUrl = currentUrl;
             console.log(`ReelSense: URL changed from ${oldUrl} to ${currentUrl}`);
-            const oldOverlay = document.getElementById('reelsense-overlay');
-            if (oldOverlay) oldOverlay.remove();
-            document.body.classList.remove('reelsense-active');
+
+            // --- THIS IS THE FIX ---
+            // Only remove the overlay if an intervention is NOT active
+            if (!isBlocked) {
+                const oldOverlay = document.getElementById('reelsense-overlay');
+                if (oldOverlay) oldOverlay.remove();
+                document.body.classList.remove('reelsense-active');
+            }
+            // --- END FIX ---
+
             if (isOnShortsPage()) {
                 console.log('ReelSense: Navigated within Shorts context');
                 checkVideoChange();
@@ -462,15 +465,24 @@ function observeNavigation() {
     });
   });
   navigationObserver.observe(document.body, { subtree: true, childList: true });
-   window.addEventListener('popstate', () => {
-       console.log('ReelSense: Popstate event detected');
-       setTimeout(() => {
-           lastUrl = document.location.href;
-           checkVideoChange();
-           if (isOnShortsPage()) { if (!analyzer) init(); else analyzer.resetSession(); }
-           else { if(analyzer) analyzer.resetSession(); }
-       }, 50);
-   });
+    window.addEventListener('popstate', () => {
+        console.log('ReelSense: Popstate event detected');
+        setTimeout(() => {
+            lastUrl = document.location.href;
+
+            // --- THIS IS THE FIX ---
+            if (!isBlocked) {
+                const oldOverlay = document.getElementById('reelsense-overlay');
+                if (oldOverlay) oldOverlay.remove();
+                document.body.classList.remove('reelsense-active');
+            }
+            // --- END FIX ---
+
+            checkVideoChange();
+            if (isOnShortsPage()) { if (!analyzer) init(); else analyzer.resetSession(); }
+            else { if(analyzer) analyzer.resetSession(); }
+        }, 50);
+    });
 }
 
 
@@ -496,7 +508,7 @@ class BehaviorAnalyzer {
         // No model loaded here
     }
 
-     recordScroll() {
+      recordScroll() {
         const now = Date.now();
         this.scrollEvents.push(now);
         this.scrollEvents = this.scrollEvents.filter(time => now - time < 10000);
@@ -505,36 +517,44 @@ class BehaviorAnalyzer {
         this.updateMindlessScore();
     }
 
-    // Updated recordVideoView - sends 'videos: 1'
+    // --- FIX: This is the new, corrected logic ---
     recordVideoView(videoId, genre = 'unknown') {
-        console.log(`ReelSense: Recording view for videoId: ${videoId}`);
-        const now = Date.now();
-        if (this.currentVideoStartTime && this.currentVideoId) {
-            const watchTime = (now - this.currentVideoStartTime) / 1000;
-             if (watchTime > 0.1) {
-                this.videoHistory.push({ id: this.currentVideoId, watchTime: watchTime, genre: this.currentVideoGenre, timestamp: this.currentVideoStartTime });
-                console.log(`ReelSense: Logged watchTime ${watchTime.toFixed(1)}s for previous video ${this.currentVideoId}`);
-                if (this.videoHistory.length > 50) this.videoHistory.shift();
-                // Send stat update for the PREVIOUS video being 'watched'
-                if (chrome.runtime?.id) {
-                    chrome.runtime.sendMessage({ action: 'updateStats', platform: 'youtube', data: { videos: 1 } }, // videos represents one short scrolled
-                     response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
-                }
-             } else { console.log(`ReelSense: Ignoring very short view (${watchTime.toFixed(1)}s) for ${this.currentVideoId}`); }
-        } else {
-             console.log(`ReelSense: First video recorded: ${videoId}`);
-             if (videoId && chrome.runtime?.id) {
-                chrome.runtime.sendMessage({ action: 'updateStats', platform: 'youtube', data: { videos: 1 } }, // videos represents one short scrolled
-                 response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
-             }
-        }
-        this.currentVideoStartTime = now; this.currentVideoId = videoId; this.currentVideoGenre = genre;
-        this.genreSequence.push(genre);
-        if (this.genreSequence.length > 30) this.genreSequence.shift();
-        this.calculateMetrics();
-        this.updateMindlessScore();
-        console.log(`ReelSense: State updated for ${videoId}. Score: ${this.mindlessScore}, Avg Watch: ${this.avgWatchTime.toFixed(1)}s`);
-    }
+      console.log(`ReelSense: Recording view for videoId: ${videoId}`);
+      const now = Date.now();
+
+      // 1. Log watch time for the PREVIOUS video (if there was one)
+      if (this.currentVideoId && this.currentVideoId !== videoId) {
+          const watchTime = (now - this.currentVideoStartTime) / 1000;
+          if (watchTime > 0.1) { // YouTube transitions are faster
+              this.videoHistory.push({ id: this.currentVideoId, watchTime: watchTime, genre: this.currentVideoGenre, timestamp: this.currentVideoStartTime });
+              console.log(`ReelSense: Logged watchTime ${watchTime.toFixed(1)}s for previous video ${this.currentVideoId}`);
+              if (this.videoHistory.length > 50) this.videoHistory.shift();
+          } else { 
+              console.log(`ReelSense: Ignoring very short view (${watchTime.toFixed(1)}s) for ${this.currentVideoId}`); 
+          }
+      }
+
+      // 2. Count the NEW video *immediately*
+      // We check this.currentVideoId !== videoId to prevent double counting
+      if (this.currentVideoId !== videoId) {
+          console.log("ReelSense: Sending 'videos: 1' for NEW video:", videoId);
+          if (chrome.runtime?.id) {
+              chrome.runtime.sendMessage({ action: 'updateStats', platform: 'youtube', data: { videos: 1 } },
+                  response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
+          }
+      } else {
+          console.log(`ReelSense: Same video ${videoId} - no duplicate count`);
+          return; // Exit
+      }
+
+      // 3. Update state to the new video
+      this.currentVideoStartTime = now; this.currentVideoId = videoId; this.currentVideoGenre = genre;
+      this.genreSequence.push(genre);
+      if (this.genreSequence.length > 30) this.genreSequence.shift();
+      this.calculateMetrics();
+      this.updateMindlessScore();
+      console.log(`ReelSense: State updated for ${videoId}. Score: ${this.mindlessScore}, Avg Watch: ${this.avgWatchTime.toFixed(1)}s`);
+  }
 
     calculateMetrics() {
         if (this.videoHistory.length === 0) { this.avgWatchTime = 0; this.skipRate = 0; this.genreDiversity = 1; return; };
@@ -572,30 +592,28 @@ class BehaviorAnalyzer {
     const speedThreshold = this.settings?.scrollSpeedThreshold || 5;
     const minWatch = this.settings?.minWatchTime || 3;
 
-    // --- LOGGING ---
     const scrollFactor = speedThreshold > 0 ? Math.min(2, this.scrollSpeed / speedThreshold) : (this.scrollSpeed > 0 ? 2 : 0);
     const scrollSpeedScore = Math.min(30, scrollFactor * 15);
     score += scrollSpeedScore;
-    console.log(`RS ScoreCalc: ScrollSpeed=${this.scrollSpeed.toFixed(1)}, Threshold=${speedThreshold}, ScorePart=${scrollSpeedScore.toFixed(1)}`);
+    // console.log(`RS ScoreCalc: ScrollSpeed=${this.scrollSpeed.toFixed(1)}, Threshold=${speedThreshold}, ScorePart=${scrollSpeedScore.toFixed(1)}`);
 
     const skipRateScore = this.skipRate * 25;
     score += skipRateScore;
-    console.log(`RS ScoreCalc: SkipRate=${this.skipRate.toFixed(2)}, ScorePart=${skipRateScore.toFixed(1)}`);
+    // console.log(`RS ScoreCalc: SkipRate=${this.skipRate.toFixed(2)}, ScorePart=${skipRateScore.toFixed(1)}`);
 
     const watchTimeScore = this.avgWatchTime < minWatch ? 20 : Math.max(0, 20 * (1 - this.avgWatchTime / (minWatch * 2)));
     const watchTimeScoreCapped = Math.min(20, watchTimeScore); // Apply cap
     score += watchTimeScoreCapped;
-    console.log(`RS ScoreCalc: AvgWatch=${this.avgWatchTime.toFixed(1)}, MinWatch=${minWatch}, ScorePart=${watchTimeScoreCapped.toFixed(1)}`);
+    // console.log(`RS ScoreCalc: AvgWatch=${this.avgWatchTime.toFixed(1)}, MinWatch=${minWatch}, ScorePart=${watchTimeScoreCapped.toFixed(1)}`);
 
     const diversityScore = (1 - this.genreDiversity) * 15;
     score += diversityScore;
-    console.log(`RS ScoreCalc: GenreDiversity=${this.genreDiversity.toFixed(2)}, ScorePart=${diversityScore.toFixed(1)}`);
+    // console.log(`RS ScoreCalc: GenreDiversity=${this.genreDiversity.toFixed(2)}, ScorePart=${diversityScore.toFixed(1)}`);
 
     const sessionMinutes = (Date.now() - this.sessionStartTime) / 60000;
     const sessionScore = Math.min(10, (sessionMinutes / 30) * 10);
     score += sessionScore;
-    console.log(`RS ScoreCalc: SessionMins=${sessionMinutes.toFixed(1)}, ScorePart=${sessionScore.toFixed(1)}`);
-    // --- END LOGGING ---
+    // console.log(`RS ScoreCalc: SessionMins=${sessionMinutes.toFixed(1)}, ScorePart=${sessionScore.toFixed(1)}`);
 
     this.mindlessScore = Math.round(Math.max(0, Math.min(100, score)));
     console.log(`RS ScoreCalc: FINAL SCORE = ${this.mindlessScore}`); // Log final score
@@ -631,8 +649,8 @@ class BehaviorAnalyzer {
                     if (isBlocked || !analyzer || this.lastInterventionTime > now) return;
 
                     if (chrome.runtime.lastError) {
-                         console.log("Error getting prediction:", chrome.runtime.lastError.message);
-                         this.checkHeuristicsAndTrigger(currentFeatures); return; // Fallback
+                        console.log("Error getting prediction:", chrome.runtime.lastError.message);
+                        this.checkHeuristicsAndTrigger(currentFeatures); return; // Fallback
                     }
                     if (response?.success && typeof response.prediction === 'number') {
                         const prediction = response.prediction; const predictionThreshold = 0.75;
@@ -649,8 +667,8 @@ class BehaviorAnalyzer {
             );
             return { shouldIntervene: false, reason: 'checking_async' }; // Indicate async
         } else {
-             console.log("Runtime not available, falling back.");
-             return this.checkHeuristics(currentFeatures); // Sync fallback
+            console.log("Runtime not available, falling back.");
+            return this.checkHeuristics(currentFeatures); // Sync fallback
         }
     }
 
@@ -667,7 +685,7 @@ class BehaviorAnalyzer {
     // *** ***
 
     if (fatigue.fatigued) {
-         console.log(`RS Heuristic Trigger (Fatigue: ${fatigue.genre} x${fatigue.count})`);
+        console.log(`RS Heuristic Trigger (Fatigue: ${fatigue.genre} x${fatigue.count})`);
         return { shouldIntervene: true, reason: 'genre_fatigue', score: this.mindlessScore, details: { ...currentFeatures, genre: fatigue.genre, count: fatigue.count } };
     }
     // const threshold = this.settings?.mindlessThreshold || 70; // Defined above
@@ -679,13 +697,13 @@ class BehaviorAnalyzer {
     }
 
     // Helper called from async response or sync fallback
-     checkHeuristicsAndTrigger(currentFeatures) {
-         const now = Date.now();
-         if ((now - this.lastInterventionTime) / 1000 < 300) { console.log("Cooldown active after async check."); return; };
-         const heuristicResult = this.checkHeuristics(currentFeatures);
-         if (heuristicResult.shouldIntervene) { triggerIntervention(heuristicResult); }
-         else { console.log("ReelSense: No intervention needed after checks."); }
-     }
+      checkHeuristicsAndTrigger(currentFeatures) {
+          const now = Date.now();
+          if ((now - this.lastInterventionTime) / 1000 < 300) { console.log("Cooldown active after async check."); return; };
+          const heuristicResult = this.checkHeuristics(currentFeatures);
+          if (heuristicResult.shouldIntervene) { triggerIntervention(heuristicResult); }
+          else { console.log("ReelSense: No intervention needed after checks."); }
+      }
 
     recordIntervention() { this.lastInterventionTime = Date.now(); }
 
@@ -694,7 +712,7 @@ class BehaviorAnalyzer {
         return {
             mindlessScore: this.mindlessScore,
             scrollSpeed: this.scrollSpeed.toFixed(2),
-            videosWatched: this.videoHistory.length, // Use history length for "Reels/Shorts Scrolled"
+            videosWatched: this.videoHistory.length + (this.currentVideoId ? 1 : 0), // --- FIX: Include current video in count ---
             avgWatchTime: this.avgWatchTime.toFixed(1),
             skipRate: (this.skipRate * 100).toFixed(0),
             genreDiversity: (this.genreDiversity * 100).toFixed(0),
@@ -705,11 +723,16 @@ class BehaviorAnalyzer {
     resetSession() {
         console.log("ReelSense: Resetting session state.");
         this.scrollEvents = [];
+        this.videoHistory = []; // --- FIX: Clear history on reset ---
+        this.genreSequence = []; // --- FIX: Clear genres on reset ---
         this.sessionStartTime = Date.now();
         this.currentVideoStartTime = null;
         this.currentVideoId = null;
         this.currentVideoGenre = null;
         this.mindlessScore = 0;
+        this.avgWatchTime = 0; // --- FIX: Reset metrics ---
+        this.skipRate = 0; // --- FIX: Reset metrics ---
+        this.genreDiversity = 1; // --- FIX: Reset metrics ---
         // Keep lastInterventionTime
     }
 }
