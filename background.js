@@ -1,5 +1,7 @@
 import * as tf from '@tensorflow/tfjs';
+// Import the WASM backend to register it
 import '@tensorflow/tfjs-backend-wasm';
+
 // Attempt to set a backend that works in service workers
 tf.setBackend('wasm').then(() => console.log('ReelSense: TF.js backend set to WASM.'))
   .catch(err => console.error("ReelSense: Failed to set WASM backend:", err));
@@ -10,9 +12,14 @@ tf.setBackend('wasm').then(() => console.log('ReelSense: TF.js backend set to WA
 // --- Default Settings ---
 const DEFAULT_SETTINGS = {
   enabled: true,
-  mindlessThreshold: 70, interventionType: 'nudge', pauseDuration: 60,
-  genreFatigueLimit: 15, scrollSpeedThreshold: 5, minWatchTime: 3,
-  dailyLimit: 120, showStats: true
+  mindlessThreshold: 70, 
+  // interventionType: 'nudge', // REMOVED
+  // pauseDuration: 60, // REMOVED
+  genreFatigueLimit: 15, 
+  scrollSpeedThreshold: 5, 
+  minWatchTime: 3,
+  dailyLimit: 120, 
+  showStats: true
 };
 
 // --- Global Variables ---
@@ -134,8 +141,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       chrome.storage.local.get('settings')
         .then(result => sendResponse(result.settings || DEFAULT_SETTINGS))
         .catch(err => {
-             console.error("Error getting settings:", err);
-             sendResponse(DEFAULT_SETTINGS); // Send defaults on error
+            console.error("Error getting settings:", err);
+            sendResponse(DEFAULT_SETTINGS); // Send defaults on error
         });
       return true; // Indicate async response
 
@@ -157,7 +164,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // --- Data Logging ---
 async function logTrainingData(features, label) {
-   try {
+    try {
     // Ensure we retrieve existing data correctly
     const result = await chrome.storage.local.get('trainingData');
     const data = result.trainingData || [];
@@ -168,12 +175,12 @@ async function logTrainingData(features, label) {
         return data.length; // Return current length without adding invalid data
     }
     // Ensure all required features are present and are numbers
-     const validFeatures = featureKeys.every(key => typeof features[key] === 'number' && Number.isFinite(features[key]));
-     if (!validFeatures) {
-         console.warn("Invalid features received:", features);
-         // Optionally try to clean features or just reject
-         return data.length;
-     }
+      const validFeatures = featureKeys.every(key => typeof features[key] === 'number' && Number.isFinite(features[key]));
+      if (!validFeatures) {
+          console.warn("Invalid features received:", features);
+          // Optionally try to clean features or just reject
+          return data.length;
+      }
 
 
     const newSample = { features, label };
@@ -205,7 +212,7 @@ function predictBehavior(features) {
     const inputVector = featureKeys.map(key => Number(features[key]) || 0);
 
     // Validate input vector for NaNs or Infinity
-     if (inputVector.some(val => !Number.isFinite(val))) {
+      if (inputVector.some(val => !Number.isFinite(val))) {
         console.error("Invalid feature vector contains non-finite values:", inputVector, "Original features:", features);
         // Attempt to recover by replacing non-finite with 0, or throw error
         // For now, let's replace and log a warning
@@ -229,8 +236,8 @@ function predictBehavior(features) {
                 throw new Error("Prediction failed internally (result not a Tensor).");
             }
         } catch (predError) {
-             console.error("Error during prediction inside tf.tidy:", predError);
-             throw predError; // Re-throw to be caught by outer try-catch
+            console.error("Error during prediction inside tf.tidy:", predError);
+            throw predError; // Re-throw to be caught by outer try-catch
         }
     });
     // console.log("Prediction score:", prediction); // Can be verbose
@@ -255,7 +262,7 @@ async function trainModel() {
   );
 
   if (validData.length < 20) {
-       throw new Error(`Not enough valid training data (${validData.length}/20) after filtering.`);
+      throw new Error(`Not enough valid training data (${validData.length}/20) after filtering.`);
   }
 
 
@@ -287,7 +294,7 @@ async function trainModel() {
         onEpochEnd: (epoch, logs) => console.log(`Epoch ${epoch + 1}/${30}: loss=${logs.loss.toFixed(3)}, acc=${logs.acc.toFixed(3)}, val_loss=${logs.val_loss.toFixed(3)}, val_acc=${logs.val_acc.toFixed(3)}`),
         // Optional: Early stopping if validation loss doesn't improve
         // tf.callbacks.earlyStopping({ monitor: 'val_loss', patience: 5 })
-     }
+      }
   });
   console.log("Training history:", history.history);
 
@@ -324,20 +331,20 @@ async function loadModelFromStorage() {
     const modelArtifacts = result['reelsense-model-artifacts'];
 
     if (modelArtifacts && modelArtifacts.modelTopology && modelArtifacts.weightData) { // Basic check
-       // Reconstruct the model using tf.loadLayersModel with a custom IO handler
-       const loaded = await tf.loadLayersModel(tf.io.fromMemory(
-           modelArtifacts.modelTopology,
-           modelArtifacts.weightSpecs,
-           modelArtifacts.weightData
-       ));
-       loadedModel = loaded; // Assign to global variable
-       console.log('ReelSense: AI Model loaded from chrome.storage.local.');
+        // Reconstruct the model using tf.loadLayersModel with a custom IO handler
+        const loaded = await tf.loadLayersModel(tf.io.fromMemory(
+            modelArtifacts.modelTopology,
+            modelArtifacts.weightSpecs,
+            modelArtifacts.weightData
+        ));
+        loadedModel = loaded; // Assign to global variable
+        console.log('ReelSense: AI Model loaded from chrome.storage.local.');
 
-       // Optional: Warm up the model by making a dummy prediction
-       if (loadedModel) {
+        // Optional: Warm up the model by making a dummy prediction
+        if (loadedModel) {
             tf.tidy(() => { loadedModel.predict(tf.zeros([1, featureKeys.length])); });
             console.log("Model warmed up.");
-       }
+        }
     } else {
       console.log('ReelSense: No valid saved model artifacts found in storage.');
       loadedModel = null;
@@ -368,7 +375,7 @@ async function updateDailyStats(platform, data) {
             }
             await chrome.storage.local.set({ dailyStats: stats });
         } else {
-             console.warn("Could not update stats, platform data missing:", platform, stats);
+            console.warn("Could not update stats, platform data missing:", platform, stats);
         }
     } catch (error) {
         console.error("Error in updateDailyStats:", error);
@@ -388,6 +395,6 @@ async function recordIntervention(platform, type) {
             console.warn("Could not record intervention, platform data missing:", platform, stats);
         }
     } catch (error) {
-         console.error("Error in recordIntervention:", error);
+        console.error("Error in recordIntervention:", error);
     }
 }

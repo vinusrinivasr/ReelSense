@@ -6,8 +6,8 @@ import './popup.css'; // Import the updated CSS
 const DEFAULT_SETTINGS = {
   // enabled: true, // Removed toggle state
   mindlessThreshold: 70,
-  interventionType: 'nudge',
-  pauseDuration: 60,
+  // interventionType: 'nudge', // REMOVED
+  // pauseDuration: 60, // REMOVED
   genreFatigueLimit: 15,
   scrollSpeedThreshold: 5,
   minWatchTime: 3,
@@ -75,25 +75,22 @@ function App() {
     setTimeout(() => setNotification(''), 2000);
   };
 
-  // Handle AI Model Training Request
-  const handleTrainModel = () => {
-    if (chrome.runtime?.sendMessage) {
-      showNotification('AI Training started...');
-      chrome.runtime.sendMessage({ action: 'TRAIN_MODEL' }, (response) => {
-        if (chrome.runtime.lastError) { showNotification('Error starting.'); return; }
-        if (response?.success) showNotification(response.message || 'Training complete!');
-        else showNotification(response?.error || 'Training failed.');
-      });
-    } else { showNotification("Cannot train model now."); }
-  };
+    // Handle AI Model Training Request
+    const handleTrainModel = () => {
+      if (chrome.runtime?.sendMessage) {
+        showNotification('AI Training started...');
+        chrome.runtime.sendMessage({ action: 'TRAIN_MODEL' }, (response) => {
+          if (chrome.runtime.lastError) { showNotification('Error starting.'); return; }
+          if (response?.success) showNotification(response.message || 'Training complete!');
+          else showNotification(response?.error || 'Training failed.');
+        });
+      } else { showNotification("Cannot train model now."); }
+    };
 
   // Calculate displayed values
   const ytVideos = stats.youtube?.videos || 0;
   const igVideos = stats.instagram?.videos || 0;
   const totalVideosScrolled = ytVideos + igVideos;
-  
-  // --- FIX ---
-  // Replaced hardcoded numbers with 0
   const totalTime = Math.round(((stats.instagram?.time || 0) + (stats.youtube?.time || 0)) / 60);
   const totalInterventions = (stats.instagram?.interventions || 0) + (stats.youtube?.interventions || 0);
   const avgMindfulnessScore = 100 - (stats.highestMindlessScore || 0);
@@ -174,7 +171,6 @@ function App() {
             <div className="platform-header"> <img src="/icons/youtube.svg" alt="YouTube Icon" className="platform-svg-icon" /> <span className="platform-name">YouTube Shorts</span> </div>
             <div className="platform-details">
               <span>{ytVideos} Shorts Scrolled</span>
-              {/* --- FIX --- */}
               <span>{Math.round((stats.youtube?.time || 0) / 60)} min</span>
               <span>{stats.youtube?.interventions || 0} nudges</span>
             </div>
@@ -183,7 +179,6 @@ function App() {
               <div className="platform-header"> <img src="/icons/instagram.svg" alt="Instagram Icon" className="platform-svg-icon" /> <span className="platform-name">Instagram Reels</span> </div>
             <div className="platform-details">
               <span>{igVideos} Reels Scrolled</span>
-              {/* --- FIX --- */}
               <span>{Math.round((stats.instagram?.time || 0) / 60)} min</span>
               <span>{stats.instagram?.interventions || 0} nudges</span>
             </div>
@@ -193,20 +188,16 @@ function App() {
         {/* Settings Section */}
         <div className="settings-section">
           <h3 className="section-title">Quick Settings</h3>
-          <div className="setting-item">
-            <label htmlFor="interventionType" className="setting-label">Intervention Type</label>
-            <select className="setting-input" id="interventionType" value={settings.interventionType} onChange={handleInputChange}>
-              <option value="nudge">Gentle Nudge</option> <option value="pause">Timed Pause</option> <option value="block">Full Block</option>
-            </select>
-          </div>
+          
+          {/* --- REMOVED Intervention Type dropdown --- */}
+          
           <div className="setting-item">
             <label htmlFor="mindlessThreshold" className="setting-label">Mindless Threshold (0-100)</label>
             <input type="number" className="setting-input" id="mindlessThreshold" min="0" max="100" value={settings.mindlessThreshold} onChange={handleInputChange}/>
           </div>
-          <div className="setting-item">
-            <label htmlFor="pauseDuration" className="setting-label">Pause Duration (seconds)</label>
-            <input type="number" className="setting-input" id="pauseDuration" min="30" max="300" value={settings.pauseDuration} onChange={handleInputChange}/>
-          </div>
+          
+          {/* --- REMOVED Pause Duration input --- */}
+
           <button className="btn" onClick={handleSaveSettings}>Save Settings</button>
           <button className="btn btn-train" onClick={handleTrainModel} style={{ marginTop: '10px' }}>Train AI Model Manually</button>
         </div>
