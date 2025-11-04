@@ -11,51 +11,38 @@ let lastVideoId = null; // Stores the ID detected from URL
 const DEFAULT_SETTINGS = {
     enabled: true,
     mindlessThreshold: 70,
-    // interventionType: 'nudge', // REMOVED
-    // pauseDuration: 60, // REMOVED
     genreFatigueLimit: 15,
     scrollSpeedThreshold: 5,
     minWatchTime: 3,
     dailyLimit: 120,
-    showStats: true
+    showStats: true,
+    countdownDuration: 30 // --- ADDED ---
 }; // Fallback
 
-// --- FIX: PASTED THE MISSING FUNCTION HERE ---
 function getVideoIdFromElement(videoElement) {
     try {
-        // Try to get ID from src URL
         const src = videoElement.src || videoElement.currentSrc;
         if (src) {
-            // Instagram video URLs often contain unique identifiers
             const match = src.match(/\/([a-f0-9]{32})\./);
             if (match) return match[1];
-            
-            // Try blob URL ID
             if (src.startsWith('blob:')) {
-                // Use the blob URL itself as unique ID
                 return 'blob-' + src.slice(-12);
             }
         }
-        
-        // Try to find unique ID from parent article
         const article = videoElement.closest('article');
         if (article) {
-            // Look for Instagram's internal ID in data attributes or aria-label
             const href = article.querySelector('a[href*="/reel/"]')?.href;
             if (href) {
                 const match = href.match(/\/reel\/([^/?]+)/);
                 if (match) return match[1];
             }
         }
-        
         return null;
     } catch (e) {
         console.error("RS Insta: Error getting video ID from element:", e);
         return null;
     }
 }
-// --- END OF FIX ---
-
 
 // Initialize
 async function init() {
@@ -92,7 +79,6 @@ async function init() {
 }
 
 function isOnReelsPage() {
-  // Check for both /reels/ and /reel/ paths
   const onPage = window.location.pathname.includes('/reels/') || window.location.pathname.startsWith('/reel/');
   return onPage;
 }
@@ -152,15 +138,10 @@ function startMonitoring() {
     }, 5000); 
 }
 
-
-// Triggered ONLY by observeNavigation or initial load
 function checkVideoChange() {
     const videoId = getCurrentVideoIdFromUrl();
-    
     const videoElement = getCurrentVideoElement();
-    // --- FIX: This line will no longer cause a ReferenceError ---
     const elementBasedId = videoElement ? getVideoIdFromElement(videoElement) : null;
-    
     const detectedId = videoId || elementBasedId;
 
     if (detectedId && detectedId !== lastVideoId) {
@@ -262,7 +243,7 @@ function triggerIntervention(result) {
 
   chrome.runtime.sendMessage({ action: 'updateStats', platform: 'instagram', data: { mindlessScore: result.score } },
     response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateScore):", chrome.runtime.lastError.message); }); // Error log
-
+  
   showNudge(result);
 }
 
@@ -314,7 +295,7 @@ function showNudge(result) {
     <div class="reelsense-nudge">
       <div class="reelsense-icon">🌟</div>
       <h2>ReelSense Check-In</h2>
-      <p class="reelsense-message">${message}</p>
+      <p class="reelsense-message">You've scrolled mindlessly. Take a break!</p>
       <div class="reelsense-stats">
         <div class="stat-item">
           <span class="stat-label">Mindfulness Score</span>
@@ -345,61 +326,58 @@ function showNudge(result) {
   document.getElementById('reelsense-take-break').addEventListener('click', () => {
       console.log("RS Insta: Nudge - Take Break clicked"); // Log: Action
       if (document.getElementById('reelsense-overlay') === overlay) overlay.remove();
-      showBreathingExercise();
+      // --- FIX: Now calls showCountdown ---
+      showCountdown();
   });
 }
 
-function showBreathingExercise() {
-    console.log("RS Insta: Showing Breathing Exercise"); // Log: Show UI
-  const overlay = createOverlay('breathing');
+// --- REPLACED showBreathingExercise with showCountdown ---
+function showCountdown() {
+  console.log("RS Insta: Showing Countdown");
+  const overlay = createOverlay('countdown'); // Use a new class
+  const duration = settings.countdownDuration || 30; // Get duration from settings
+  let remaining = duration;
+
   overlay.innerHTML = `
-    <div class="reelsense-breathing">
-      <h2>Breathing Exercise</h2>
-      <p>Follow the circle rhythm</p>
-      <div class="breathing-circle" id="breathing-circle" style="transform: scale(1);"></div>
-      <div class="breathing-text" id="breathing-text">Breathe In</div>
-      <button class="reelsense-btn secondary" id="breathing-skip">Skip</button>
+    <div class="reelsense-countdown">
+      <h2>Take a Break</h2>
+      <p>Your session is paused. Take a moment to reset.</p>
+      <div class="reelsense-countdown-timer" id="reelsense-timer">${remaining}</div>
+      <button class="reelsense-btn" id="countdown-skip-btn">Skip</button>
     </div>
   `;
   document.body.appendChild(overlay);
   document.body.classList.add('reelsense-active');
 
-  const circle = document.getElementById('breathing-circle');
-  const text = document.getElementById('breathing-text');
-  let cycle = 0; const maxCycles = 3;
-  let animationTimeout1, animationTimeout2, animationTimeout3;
+  const timerEl = document.getElementById('reelsense-timer');
 
-  function cleanupBreathing() {
-      clearTimeout(animationTimeout1); clearTimeout(animationTimeout2); clearTimeout(animationTimeout3);
-      if (document.getElementById('reelsense-overlay') === overlay) overlay.remove();
-      document.body.classList.remove('reelsense-active');
-      isBlocked = false;
-      if(analyzer) analyzer.resetSession();
-      console.log("RS Insta: Breathing exercise ended/skipped"); // Log: Action
+  // Cleanup function (to avoid repeating code)
+  function cleanupCountdown() {
+    clearInterval(timer);
+    if (document.getElementById('reelsense-overlay') === overlay) {
+      overlay.remove();
+    }
+    document.body.classList.remove('reelsense-active');
+    isBlocked = false;
+    if (analyzer) analyzer.resetSession();
+    console.log("RS Insta: Countdown ended or skipped.");
   }
 
-  function breathingCycle() { 
-    if (!text || !circle || !document.body.contains(overlay)) { cleanupBreathing(); return; };
-    text.textContent = 'Breathe In';
-    circle.style.transform = 'scale(1.5)';
-    circle.style.transition = 'transform 4s ease-in-out';
-    animationTimeout1 = setTimeout(() => {
-      if (text) text.textContent = 'Hold';
-      animationTimeout2 = setTimeout(() => {
-        if (text) text.textContent = 'Breathe Out';
-        if (circle) circle.style.transform = 'scale(1)';
-        animationTimeout3 = setTimeout(() => {
-          cycle++;
-          if (cycle < maxCycles) breathingCycle();
-          else cleanupBreathing();
-        }, 2000);
-      }, 2000);
-    }, 4000);
-  }
+  // Timer logic
+  const timer = setInterval(() => {
+    remaining--;
+    if (timerEl) timerEl.textContent = remaining;
+    
+    if (remaining <= 0) {
+      cleanupCountdown();
+    }
+  }, 1000);
 
-  breathingCycle();
-  document.getElementById('breathing-skip').addEventListener('click', cleanupBreathing);
+  // Skip button logic
+  document.getElementById('countdown-skip-btn').addEventListener('click', cleanupCountdown);
 }
+// --- END OF REPLACEMENT ---
+
 
 function createOverlay(type) {
   const existingOverlay = document.getElementById('reelsense-overlay');

@@ -6,13 +6,12 @@ import './popup.css'; // Import the updated CSS
 const DEFAULT_SETTINGS = {
   // enabled: true, // Removed toggle state
   mindlessThreshold: 70,
-  // interventionType: 'nudge', // REMOVED
-  // pauseDuration: 60, // REMOVED
   genreFatigueLimit: 15,
   scrollSpeedThreshold: 5,
   minWatchTime: 3,
   dailyLimit: 120,
-  showStats: true
+  showStats: true,
+  countdownDuration: 30
 };
 const DEFAULT_STATS = {
   date: new Date().toDateString(),
@@ -75,17 +74,7 @@ function App() {
     setTimeout(() => setNotification(''), 2000);
   };
 
-    // Handle AI Model Training Request
-    const handleTrainModel = () => {
-      if (chrome.runtime?.sendMessage) {
-        showNotification('AI Training started...');
-        chrome.runtime.sendMessage({ action: 'TRAIN_MODEL' }, (response) => {
-          if (chrome.runtime.lastError) { showNotification('Error starting.'); return; }
-          if (response?.success) showNotification(response.message || 'Training complete!');
-          else showNotification(response?.error || 'Training failed.');
-        });
-      } else { showNotification("Cannot train model now."); }
-    };
+  // --- REMOVED handleTrainModel function ---
 
   // Calculate displayed values
   const ytVideos = stats.youtube?.videos || 0;
@@ -189,17 +178,20 @@ function App() {
         <div className="settings-section">
           <h3 className="section-title">Quick Settings</h3>
           
-          {/* --- REMOVED Intervention Type dropdown --- */}
-          
           <div className="setting-item">
             <label htmlFor="mindlessThreshold" className="setting-label">Mindless Threshold (0-100)</label>
             <input type="number" className="setting-input" id="mindlessThreshold" min="0" max="100" value={settings.mindlessThreshold} onChange={handleInputChange}/>
           </div>
           
-          {/* --- REMOVED Pause Duration input --- */}
+          <div className="setting-item">
+            <label htmlFor="countdownDuration" className="setting-label">Break Countdown (seconds)</label>
+            <input type="number" className="setting-input" id="countdownDuration" min="5" max="300" value={settings.countdownDuration} onChange={handleInputChange}/>
+          </div>
 
           <button className="btn" onClick={handleSaveSettings}>Save Settings</button>
-          <button className="btn btn-train" onClick={handleTrainModel} style={{ marginTop: '10px' }}>Train AI Model Manually</button>
+          
+          {/* --- REMOVED Train AI Model button --- */}
+        
         </div>
 
         {/* Footer */}

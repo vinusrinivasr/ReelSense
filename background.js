@@ -1,11 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-// Import the WASM backend to register it
-import '@tensorflow/tfjs-backend-wasm';
-
-// Attempt to set a backend that works in service workers
-tf.setBackend('wasm').then(() => console.log('ReelSense: TF.js backend set to WASM.'))
-  .catch(err => console.error("ReelSense: Failed to set WASM backend:", err));
-
+// The script will now start here and tf.js will use its default backend.
 
 // ReelSense Background Service Worker
 
@@ -13,13 +7,12 @@ tf.setBackend('wasm').then(() => console.log('ReelSense: TF.js backend set to WA
 const DEFAULT_SETTINGS = {
   enabled: true,
   mindlessThreshold: 70, 
-  // interventionType: 'nudge', // REMOVED
-  // pauseDuration: 60, // REMOVED
   genreFatigueLimit: 15, 
   scrollSpeedThreshold: 5, 
   minWatchTime: 3,
   dailyLimit: 120, 
-  showStats: true
+  showStats: true,
+  countdownDuration: 30 // --- ADDED ---
 };
 
 // --- Global Variables ---
@@ -82,11 +75,10 @@ function getNextMidnight() {
 
 // --- Message Handling ---
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('ReelSense: Message received in background!', request.action); // --- ADDED FOR DEBUGGING ---
+
   // Use a switch for better organization
   switch (request.action) {
-    // case 'trackEvent': // Heuristic fallback logic (if needed) could go here
-    //   return true;
-
     case 'TRAIN_MODEL':
       console.log('ReelSense: Manual training trigger received.');
       trainModel()
@@ -147,6 +139,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true; // Indicate async response
 
     case 'recordIntervention':
+      console.log('ReelSense: recordIntervention message received!'); // --- ADDED FOR DEBUGGING ---
       recordIntervention(request.platform, request.type)
         .then(() => sendResponse({ success: true }))
         .catch(err => {

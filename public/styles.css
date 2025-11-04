@@ -2,7 +2,7 @@
 /* Re-themed to match popup.css */
 
 /* --- Import Font --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&display=swap');
 
 /* --- Root Color Palette (from popup.css) --- */
 :root {
@@ -13,7 +13,7 @@
   --accent-primary: #61dafb; /* React blue accent */
   --border-color: #4a4f5a;
   --success-color: #4CAF50;
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 /* Base Overlay */
@@ -23,7 +23,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  /* Use a transparent version of the primary background */
+  /* Dark, slightly transparent background for the modal */
   background: rgba(40, 44, 52, 0.9); 
   backdrop-filter: blur(8px);
   z-index: 2147483647; /* Max z-index */
@@ -34,6 +34,13 @@
   font-family: var(--font-family);
   color: var(--text-primary);
 }
+
+/* This class is for the countdown, which IS the overlay */
+.reelsense-overlay.reelsense-countdown {
+  background: var(--bg-primary); /* Solid, full-screen background */
+  backdrop-filter: none;
+}
+
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -155,53 +162,67 @@
   border-color: var(--accent-primary);
 }
 
-/* Breathing Exercise */
-.reelsense-breathing {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 25px 30px;
-  border-radius: 8px;
-  max-width: 420px;
-  width: 90%;
+/* --- UPDATED Full-Screen Countdown CSS --- */
+.reelsense-countdown {
+  /* This IS the overlay, so it's already full-screen */
+  /* We just need to center the content inside it */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  color: var(--text-primary);
+  padding: 30px;
 }
 
-.reelsense-breathing h2 {
-  font-size: 22px;
-  margin: 0 0 10px 0;
-  font-weight: 600;
+.reelsense-countdown h2 {
+  font-size: 36px; /* Larger */
+  margin: 0 0 15px 0;
+  font-weight: 700;
   color: var(--accent-primary);
 }
 
-.reelsense-breathing p {
-  font-size: 16px;
+.reelsense-countdown p {
+  font-size: 20px; /* Larger */
   color: var(--text-secondary);
-  margin-bottom: 30px;
+  margin-bottom: 40px;
+  max-width: 500px; /* Keep text readable */
+  line-height: 1.6;
 }
 
-.breathing-circle {
-  width: 120px;
-  height: 120px;
-  background: var(--accent-primary);
-  border-radius: 50%;
-  margin: 0 auto 25px auto;
-  box-shadow: 0 0 25px rgba(97, 218, 251, 0.5);
-  transform: scale(1);
-  transition: transform 4s ease-in-out;
+.reelsense-countdown-timer {
+  font-size: 120px; /* Much larger */
+  font-weight: 800;
+  color: var(--accent-primary);
+  margin: 20px 0 40px 0;
 }
 
-.breathing-text {
-  font-size: 20px;
-  font-weight: 500;
+#countdown-skip-btn {
+  /* Use the .reelsense-btn base style */
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+
+  /* Style as secondary button */
+  background: var(--bg-secondary);
   color: var(--text-primary);
-  margin-bottom: 30px;
-  min-height: 30px;
+  border: 1px solid var(--border-color);
+  
+  /* Give it a reasonable width */
+  width: 200px; 
+  max-width: 90%;
 }
 
-#breathing-skip {
-  margin-top: 15px;
+#countdown-skip-btn:hover {
+  background: var(--bg-primary);
+  border-color: var(--accent-primary);
 }
+/* --- END Countdown CSS --- */
+
 
 /* --- AI Feedback Section --- */
 .reelsense-feedback-wrapper {
@@ -254,21 +275,30 @@
 
 /* Responsive Design */
 @media (max-width: 600px) {
-  .reelsense-nudge,
-  .reelsense-breathing {
+  /* Nudge is still a modal */
+  .reelsense-nudge {
     padding: 20px;
     margin: 20px;
     max-width: calc(100vw - 40px);
   }
   
-  .reelsense-nudge h2,
-  .reelsense-breathing h2 {
+  .reelsense-nudge h2 {
     font-size: 20px;
   }
   
-  .reelsense-message,
-  .reelsense-breathing p {
+  .reelsense-message {
     font-size: 14px;
+  }
+  
+  /* Countdown is full-screen, just reduce text size */
+  .reelsense-countdown h2 {
+    font-size: 28px;
+  }
+  .reelsense-countdown p {
+    font-size: 16px;
+  }
+  .reelsense-countdown-timer {
+    font-size: 90px;
   }
   
   .reelsense-stats {
