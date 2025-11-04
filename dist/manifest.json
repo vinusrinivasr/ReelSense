@@ -19,7 +19,7 @@
   "content_scripts": [
     {
       "js": [
-        "assets/content-instagram.js-loader-1bb2a585.js"
+        "assets/content-instagram.js-loader-c44e5f1c.js"
       ],
       "matches": [
         "*://*.instagram.com/*"
@@ -31,7 +31,7 @@
     },
     {
       "js": [
-        "assets/content-youtube.js-loader-da5ab619.js"
+        "assets/content-youtube.js-loader-b0ae738d.js"
       ],
       "matches": [
         "*://*.youtube.com/*"
@@ -69,7 +69,7 @@
       "resources": [
         "assets/register_all_kernels-580e0044.js",
         "assets/_commonjsHelpers-de833af9.js",
-        "assets/content-instagram.js-a207489f.js"
+        "assets/content-instagram.js-1378d659.js"
       ],
       "use_dynamic_url": false
     },
@@ -80,7 +80,7 @@
       "resources": [
         "assets/register_all_kernels-580e0044.js",
         "assets/_commonjsHelpers-de833af9.js",
-        "assets/content-youtube.js-971be0f9.js"
+        "assets/content-youtube.js-d711cfc8.js"
       ],
       "use_dynamic_url": false
     }

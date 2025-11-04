@@ -225,7 +225,7 @@ function showNudge(result) {
     <div class="reelsense-nudge">
       <div class="reelsense-icon">🌟</div>
       <h2>ReelSense Check-In</h2>
-      <p class="reelsense-message">${message}</p>
+      <p class="reelsense-message">You've scrolled mindlessly. Take a break!</p>
       <div class="reelsense-stats">
         <div class="stat-item">
           <span class="stat-label">Attention Score</span>
