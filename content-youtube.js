@@ -108,6 +108,7 @@ function checkVideoChange() {
         console.log(`ReelSense: Video ID changed from ${lastVideoId} to ${videoId}`);
         lastVideoId = videoId;
         const genre = detectGenre();
+        console.log(`ReelSense: Detected Genre: ${genre}`);
 
         if (analyzer) {
             analyzer.recordVideoView(videoId, genre);
@@ -194,6 +195,7 @@ function getFeedbackUI(features) {
   feedbackWrapper.querySelectorAll('.reelsense-feedback-btn').forEach(button => {
     button.addEventListener('click', () => {
       const label = parseInt(button.dataset.label, 10);
+      console.log("RS YT: Sending feedback - Label:", label, "Features:", features);
       if (chrome.runtime?.id) {
         chrome.runtime.sendMessage({ action: 'logTrainingData', features: features, label: label },
           response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
@@ -269,7 +271,7 @@ function showCountdown() {
     <div class="reelsense-countdown">
       <h2>Take a Break</h2>
       <p>Your session is paused. Take a moment to reset.</p>
-      <div class="reelsense-countdown-timer" id="reelsense-timer">${remaining}</div><br></br>
+      <div class="reelsense-countdown-timer" id="reelsense-timer">${remaining}</div>
       <button class="reelsense-btn secondary" id="countdown-skip-btn">Skip</button>
     </div>
   `;
@@ -325,7 +327,6 @@ function observeNavigation() {
         const currentUrl = location.href;
         if (currentUrl !== lastUrl) {
             const oldUrl = lastUrl; lastUrl = currentUrl;
-            console.log(`ReelSense: URL changed from ${oldUrl} to ${currentUrl}`);
             
             if (!isBlocked) {
                 const oldOverlay = document.getElementById('reelsense-overlay');
@@ -334,12 +335,10 @@ function observeNavigation() {
             }
 
             if (isOnShortsPage()) {
-                console.log('ReelSense: Navigated within Shorts context');
                 checkVideoChange();
                 if (!analyzer) init();
                 else analyzer.resetSession();
             } else {
-                console.log('ReelSense: Navigated away from Shorts');
                 lastVideoId = null;
                 if(analyzer) analyzer.resetSession();
             }
@@ -348,7 +347,6 @@ function observeNavigation() {
   });
   navigationObserver.observe(document.body, { subtree: true, childList: true });
     window.addEventListener('popstate', () => {
-        console.log('ReelSense: Popstate event detected');
         setTimeout(() => {
             lastUrl = document.location.href;
 
@@ -369,7 +367,6 @@ function observeNavigation() {
 if (chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === 'TRIGGER_INTERVENTION') {
-            console.log('Intervention remotely triggered by background.js');
         }
     });
 } else { console.log("ReelSense: chrome.runtime.onMessage not available."); }
@@ -396,28 +393,22 @@ class BehaviorAnalyzer {
     }
 
     recordVideoView(videoId, genre = 'unknown') {
-      console.log(`ReelSense: Recording view for videoId: ${videoId}`);
       const now = Date.now();
 
       if (this.currentVideoId && this.currentVideoId !== videoId) {
           const watchTime = (now - this.currentVideoStartTime) / 1000;
           if (watchTime > 0.1) { 
               this.videoHistory.push({ id: this.currentVideoId, watchTime: watchTime, genre: this.currentVideoGenre, timestamp: this.currentVideoStartTime });
-              console.log(`ReelSense: Logged watchTime ${watchTime.toFixed(1)}s for previous video ${this.currentVideoId}`);
               if (this.videoHistory.length > 50) this.videoHistory.shift();
-          } else { 
-              console.log(`ReelSense: Ignoring very short view (${watchTime.toFixed(1)}s) for ${this.currentVideoId}`); 
           }
       }
 
       if (this.currentVideoId !== videoId) {
-          console.log("ReelSense: Sending 'videos: 1' for NEW video:", videoId);
           if (chrome.runtime?.id) {
               chrome.runtime.sendMessage({ action: 'updateStats', platform: 'youtube', data: { videos: 1 } },
                   response => { if (chrome.runtime.lastError) console.log("RS Err:", chrome.runtime.lastError.message); });
           }
       } else {
-          console.log(`ReelSense: Same video ${videoId} - no duplicate count`);
           return; 
       }
 
@@ -426,7 +417,6 @@ class BehaviorAnalyzer {
       if (this.genreSequence.length > 30) this.genreSequence.shift();
       this.calculateMetrics();
       this.updateMindlessScore();
-      console.log(`ReelSense: State updated for ${videoId}. Score: ${this.mindlessScore}, Avg Watch: ${this.avgWatchTime.toFixed(1)}s`);
   }
 
     calculateMetrics() {
@@ -478,7 +468,6 @@ class BehaviorAnalyzer {
         const sessionScore = Math.min(10, (sessionMinutes / 30) * 10);
         score += sessionScore;
         this.mindlessScore = Math.round(Math.max(0, Math.min(100, score)));
-        console.log(`RS ScoreCalc: FINAL SCORE = ${this.mindlessScore}`);
         return this.mindlessScore;
     }
 
