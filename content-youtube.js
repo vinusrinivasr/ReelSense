@@ -1,7 +1,4 @@
-import * as tf from '@tensorflow/tfjs'; // Import TensorFlow.js
-
-// ReelSense Content Script for YouTube Shorts
-// Monitors and intervenes on YouTube Shorts
+import * as tf from '@tensorflow/tfjs';
 
 let analyzer = null;
 let settings = null;
@@ -16,10 +13,9 @@ const DEFAULT_SETTINGS = {
     minWatchTime: 3,
     dailyLimit: 120,
     showStats: true,
-    countdownDuration: 30 // --- ADDED ---
-}; // Fallback
+    countdownDuration: 30
+};
 
-// Initialize
 async function init() {
   console.log('ReelSense: YouTube script loaded');
 
@@ -44,7 +40,7 @@ async function init() {
     startMonitoring();
   }
 
-  observeNavigation(); // Use URL changes for video detection
+  observeNavigation();
 }
 
 function isOnShortsPage() {
@@ -219,7 +215,7 @@ function showNudge(result) {
   };
   const messageList = messages[result.reason] || messages.mindless_score;
   const message = messageList[Math.floor(Math.random() * messageList.length)];
-  const currentStats = analyzer ? analyzer.getStats() : { videosWatched: 'N/A' }; // Use videosWatched for display
+  const currentStats = analyzer ? analyzer.getStats() : { videosWatched: 'N/A' };
 
   overlay.innerHTML = `
     <div class="reelsense-nudge">
@@ -259,24 +255,22 @@ function showNudge(result) {
   });
   document.getElementById('reelsense-take-break').addEventListener('click', () => {
     overlay.remove();
-    // --- FIX: Now calls showCountdown ---
     showCountdown();
   });
 }
 
-// --- REPLACED showBreathingExercise with showCountdown ---
 function showCountdown() {
   console.log("RS YT: Showing Countdown");
-  const overlay = createOverlay('countdown'); // Use a new class
-  const duration = settings.countdownDuration || 30; // Get duration from settings
+  const overlay = createOverlay('countdown');
+  const duration = settings.countdownDuration || 30;
   let remaining = duration;
 
   overlay.innerHTML = `
     <div class="reelsense-countdown">
       <h2>Take a Break</h2>
       <p>Your session is paused. Take a moment to reset.</p>
-      <div class="reelsense-countdown-timer" id="reelsense-timer">${remaining}</div>
-      <button class="reelsense-btn" id="countdown-skip-btn">Skip</button>
+      <div class="reelsense-countdown-timer" id="reelsense-timer">${remaining}</div><br></br>
+      <button class="reelsense-btn secondary" id="countdown-skip-btn">Skip</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -284,7 +278,6 @@ function showCountdown() {
 
   const timerEl = document.getElementById('reelsense-timer');
 
-  // Cleanup function (to avoid repeating code)
   function cleanupCountdown() {
     clearInterval(timer);
     if (document.getElementById('reelsense-overlay') === overlay) {
@@ -296,7 +289,6 @@ function showCountdown() {
     console.log("RS YT: Countdown ended or skipped.");
   }
 
-  // Timer logic
   const timer = setInterval(() => {
     remaining--;
     if (timerEl) timerEl.textContent = remaining;
@@ -306,10 +298,8 @@ function showCountdown() {
     }
   }, 1000);
 
-  // Skip button logic
   document.getElementById('countdown-skip-btn').addEventListener('click', cleanupCountdown);
 }
-// --- END OF REPLACEMENT ---
 
 function createOverlay(type) {
   const existingOverlay = document.getElementById('reelsense-overlay');
@@ -317,7 +307,7 @@ function createOverlay(type) {
   const overlay = document.createElement('div');
   overlay.className = `reelsense-overlay reelsense-${type}`;
   overlay.id = 'reelsense-overlay';
-  overlay.style.zIndex = '2147483647'; // Max z-index
+  overlay.style.zIndex = '2147483647';
   return overlay;
 }
 
@@ -331,7 +321,7 @@ function updateStats() {
 function observeNavigation() {
   let lastUrl = location.href;
   navigationObserver = new MutationObserver(() => {
-    window.requestAnimationFrame(() => { // Debounce mutation checks
+    window.requestAnimationFrame(() => {
         const currentUrl = location.href;
         if (currentUrl !== lastUrl) {
             const oldUrl = lastUrl; lastUrl = currentUrl;
@@ -385,7 +375,6 @@ if (chrome.runtime?.onMessage) {
 } else { console.log("ReelSense: chrome.runtime.onMessage not available."); }
 
 
-// --- BehaviorAnalyzer class ---
 class BehaviorAnalyzer {
     constructor(settings) {
         this.settings = settings || DEFAULT_SETTINGS;
@@ -595,5 +584,4 @@ class BehaviorAnalyzer {
     }
 }
 
-// Start the script
 init();

@@ -196,33 +196,12 @@
   margin: 20px 0 40px 0;
 }
 
+/* --- FIX: REMOVED the #countdown-skip-btn style block --- */
+/* The button will now be styled by .reelsense-btn.secondary */
 #countdown-skip-btn {
-  /* Use the .reelsense-btn base style */
-  padding: 10px 15px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: inherit;
-
-  /* Style as secondary button */
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  
-  /* Give it a reasonable width */
   width: 200px; 
   max-width: 90%;
 }
-
-#countdown-skip-btn:hover {
-  background: var(--bg-primary);
-  border-color: var(--accent-primary);
-}
-/* --- END Countdown CSS --- */
-
 
 /* --- AI Feedback Section --- */
 .reelsense-feedback-wrapper {

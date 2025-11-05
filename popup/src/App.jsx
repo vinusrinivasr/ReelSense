@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { PieChart } from 'react-minimal-pie-chart'; // Import PieChart
-import './popup.css'; // Import the updated CSS
+import { useState, useEffect } from 'react';
+import { PieChart } from 'react-minimal-pie-chart';
+import './popup.css';
 
-// Default values
 const DEFAULT_SETTINGS = {
-  // enabled: true, // Removed toggle state
   mindlessThreshold: 70,
   genreFatigueLimit: 15,
   scrollSpeedThreshold: 5,
@@ -20,36 +18,31 @@ const DEFAULT_STATS = {
   totalMindlessScore: 0, highestMindlessScore: 0
 };
 
-// --- UPDATED Colors for the Pie Chart ---
-const YOUTUBE_COLOR = '#FF0000'; // Red
-const INSTAGRAM_COLOR = '#0077F7'; // Blue
+const YOUTUBE_COLOR = '#FF0000';
+const INSTAGRAM_COLOR = '#0077F7';
 
 function App() {
-  const [settings, setSettings] = useState(() => ({ ...DEFAULT_SETTINGS, enabled: true })); // Keep enabled internally for now
+  const [settings, setSettings] = useState(() => ({ ...DEFAULT_SETTINGS, enabled: true }));
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [notification, setNotification] = useState('');
 
-  // Load settings and stats on mount, listen for changes
   useEffect(() => {
     if (chrome.storage?.local) {
       chrome.storage.local.get(['settings', 'dailyStats'], (result) => {
         if (chrome.runtime.lastError) { console.error("Error loading data:", chrome.runtime.lastError); return; }
-        // Ensure 'enabled' defaults to true if not present in loaded settings
         setSettings({ ...DEFAULT_SETTINGS, ...(result.settings || {}), enabled: result.settings?.enabled ?? true });
         setStats(result.dailyStats || DEFAULT_STATS);
       });
       const listener = (changes, area) => {
         if (area === 'local' && changes.dailyStats) setStats(changes.dailyStats.newValue || DEFAULT_STATS);
-        if (area === 'local' && changes.settings) setSettings(prev => ({ ...prev, ...(changes.settings.newValue || {})})); // Merge updates
+        if (area === 'local' && changes.settings) setSettings(prev => ({ ...prev, ...(changes.settings.newValue || {})}));
       };
       chrome.storage.onChanged.addListener(listener);
       return () => { if (chrome.storage?.onChanged) chrome.storage.onChanged.removeListener(listener); }
     } else { console.log("chrome.storage API not available."); }
   }, []);
 
-  // Save settings
   const handleSaveSettings = () => {
-    // Keep the 'enabled' state when saving other settings
     const newSettings = { ...settings };
     if (chrome.storage?.local) {
       chrome.storage.local.set({ settings: newSettings }, () => {
@@ -59,24 +52,17 @@ function App() {
     } else { showNotification('Settings Saved! (Local)'); }
   };
 
-  // Handle input changes
   const handleInputChange = (e) => {
       const { id, value, type, checked } = e.target;
       const processedValue = type === 'checkbox' ? checked : (type === 'number' ? parseInt(value, 10) || 0 : value);
-      // Update only the specific setting, keep 'enabled' as is
       setSettings(prev => ({ ...prev, [id]: processedValue }));
   };
 
-
-  // Show notifications
   const showNotification = (message) => {
     setNotification(message);
     setTimeout(() => setNotification(''), 2000);
   };
 
-  // --- REMOVED handleTrainModel function ---
-
-  // Calculate displayed values
   const ytVideos = stats.youtube?.videos || 0;
   const igVideos = stats.instagram?.videos || 0;
   const totalVideosScrolled = ytVideos + igVideos;
@@ -84,7 +70,6 @@ function App() {
   const totalInterventions = (stats.instagram?.interventions || 0) + (stats.youtube?.interventions || 0);
   const avgMindfulnessScore = 100 - (stats.highestMindlessScore || 0);
 
-  // Prepare data for the pie chart (uses the updated color constants)
   const pieData = [];
   if (ytVideos > 0) pieData.push({ title: 'YouTube', value: ytVideos, color: YOUTUBE_COLOR });
   if (igVideos > 0) pieData.push({ title: 'Instagram', value: igVideos, color: INSTAGRAM_COLOR });
@@ -96,17 +81,14 @@ function App() {
     <>
       {notification && <div className="notification">{notification}</div>}
       <div className="app-container">
-        {/* Header */}
         <div className="header">
           <h1>ReelSense</h1>
           <p>Scroll Smarter, Not Longer</p>
         </div>
 
-        {/* Main Content Area */}
         <div className="main-content">
           <h3 className="section-title">Today's Overview</h3>
 
-          {/* Stats Grid */}
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-value">{totalVideosScrolled}</div>
@@ -126,7 +108,6 @@ function App() {
               </div>
           </div>
 
-          {/* Pie Chart Section */}
           { totalVideosScrolled > 0 && (
             <div className="chart-section">
               <h3 className="section-title" style={{ borderBottom: 'none', marginBottom: '15px' }}>Scroll Distribution</h3>
@@ -154,7 +135,6 @@ function App() {
             </div>
           )}
 
-          {/* Platform Breakdown */}
           <h3 className="section-title">Platform Details</h3>
           <div className="platform-stats">
             <div className="platform-header"> <img src="/icons/youtube.svg" alt="YouTube Icon" className="platform-svg-icon" /> <span className="platform-name">YouTube Shorts</span> </div>
@@ -172,9 +152,8 @@ function App() {
               <span>{stats.instagram?.interventions || 0} nudges</span>
             </div>
           </div>
-        </div> {/* End Main Content */}
+        </div>
 
-        {/* Settings Section */}
         <div className="settings-section">
           <h3 className="section-title">Quick Settings</h3>
           
@@ -190,11 +169,8 @@ function App() {
 
           <button className="btn" onClick={handleSaveSettings}>Save Settings</button>
           
-          {/* --- REMOVED Train AI Model button --- */}
-        
         </div>
 
-        {/* Footer */}
         <div className="footer">ReelSense v1.0</div>
       </div>
     </>

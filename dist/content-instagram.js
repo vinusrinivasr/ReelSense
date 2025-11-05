@@ -1,13 +1,10 @@
-import * as tf from '@tensorflow/tfjs'; // Import TensorFlow.js
-
-// ReelSense Content Script for Instagram
-// Monitors and intervenes on Instagram Reels
+import * as tf from '@tensorflow/tfjs';
 
 let analyzer = null;
 let settings = null;
 let isBlocked = false;
 let navigationObserver = null;
-let lastVideoId = null; // Stores the ID detected from URL
+let lastVideoId = null;
 const DEFAULT_SETTINGS = {
     enabled: true,
     mindlessThreshold: 70,
@@ -16,8 +13,8 @@ const DEFAULT_SETTINGS = {
     minWatchTime: 3,
     dailyLimit: 120,
     showStats: true,
-    countdownDuration: 30 // --- ADDED ---
-}; // Fallback
+    countdownDuration: 30
+};
 
 function getVideoIdFromElement(videoElement) {
     try {
@@ -44,9 +41,8 @@ function getVideoIdFromElement(videoElement) {
     }
 }
 
-// Initialize
 async function init() {
-  console.log('RS Insta: Initializing script...'); // Log: Start init
+  console.log('RS Insta: Initializing script...');
 
   settings = await getSettings();
     if (!settings || Object.keys(settings).length === 0) {
@@ -56,26 +52,26 @@ async function init() {
             console.error('RS Insta: Failed to load settings. Using fallback.');
             settings = DEFAULT_SETTINGS;
         } else {
-            console.log('RS Insta: Settings loaded:', settings); // Log: Settings loaded
+            console.log('RS Insta: Settings loaded:', settings);
         }
   }
 
   if (!settings.enabled) {
-    console.log('RS Insta: Disabled via settings.'); // Log: Disabled
+    console.log('RS Insta: Disabled via settings.');
     return;
   }
 
   analyzer = new BehaviorAnalyzer(settings);
-  console.log('RS Insta: Analyzer created.'); // Log: Analyzer created
+  console.log('RS Insta: Analyzer created.');
 
   if (isOnReelsPage()) {
-    console.log('RS Insta: Currently on Reels page, starting monitoring.'); // Log: On Reels page
+    console.log('RS Insta: Currently on Reels page, starting monitoring.');
     startMonitoring();
   } else {
-      console.log('RS Insta: Not currently on Reels page.'); // Log: Not on Reels page
+      console.log('RS Insta: Not currently on Reels page.');
   }
 
-  observeNavigation(); // Use URL changes for video detection
+  observeNavigation();
 }
 
 function isOnReelsPage() {
@@ -92,7 +88,7 @@ function getSettings() {
     }
     chrome.runtime.sendMessage({ action: 'getSettings' }, (response) => {
         if (chrome.runtime.lastError) {
-        console.error("RS Insta: Error getting settings:", chrome.runtime.lastError.message); // Use error log
+        console.error("RS Insta: Error getting settings:", chrome.runtime.lastError.message);
         resolve({});
       } else {
         resolve(response || {});
@@ -169,10 +165,10 @@ function getCurrentVideoIdFromUrl() {
 function getCurrentVideoElement() {
   try {
     const selectors = [
-        'article video[playsinline]', // Most common
-        'div[role="dialog"] video',   // Modal view
-        'main video[playsinline]',    // Main feed
-        'video[playsinline]'          // Fallback
+        'article video[playsinline]',
+        'div[role="dialog"] video',
+        'main video[playsinline]',
+        'video[playsinline]'
     ];
     let bestVideo = null;
     let minDistance = Infinity;
@@ -233,16 +229,16 @@ function checkIntervention() {
 }
 
 function triggerIntervention(result) {
-  console.log("RS Insta: Triggering intervention:", result.reason); // Log: Triggering
+  console.log("RS Insta: Triggering intervention:", result.reason);
   isBlocked = true;
   if(analyzer) analyzer.recordIntervention();
-    if (!chrome.runtime?.id) { console.error("RS Insta: Cannot trigger intervention, runtime invalid."); return; } // Error log
+    if (!chrome.runtime?.id) { console.error("RS Insta: Cannot trigger intervention, runtime invalid."); return; }
 
   chrome.runtime.sendMessage({ action: 'recordIntervention', platform: 'instagram', type: result.reason },
-    response => { if (chrome.runtime.lastError) console.error("RS Insta Err (recordIntervention):", chrome.runtime.lastError.message); }); // Error log
+    response => { if (chrome.runtime.lastError) console.error("RS Insta Err (recordIntervention):", chrome.runtime.lastError.message); });
 
   chrome.runtime.sendMessage({ action: 'updateStats', platform: 'instagram', data: { mindlessScore: result.score } },
-    response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateScore):", chrome.runtime.lastError.message); }); // Error log
+    response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateScore):", chrome.runtime.lastError.message); });
   
   showNudge(result);
 }
@@ -262,15 +258,15 @@ function getFeedbackUI(features) {
   feedbackWrapper.querySelectorAll('.reelsense-feedback-btn').forEach(button => {
     button.addEventListener('click', () => {
       const label = parseInt(button.dataset.label, 10);
-      console.log("RS Insta: Sending feedback - Label:", label, "Features:", features); // Log: Feedback sent
+      console.log("RS Insta: Sending feedback - Label:", label, "Features:", features);
       if (chrome.runtime?.id) {
           chrome.runtime.sendMessage({ action: 'logTrainingData', features: features, label: label },
           response => {
-              if (chrome.runtime.lastError) console.error("RS Insta Err (logTrainingData):", chrome.runtime.lastError.message); // Error log
-              else console.log("RS Insta: Feedback message sent successfully."); // Log: Feedback success
+              if (chrome.runtime.lastError) console.error("RS Insta Err (logTrainingData):", chrome.runtime.lastError.message);
+              else console.log("RS Insta: Feedback message sent successfully.");
           });
       } else {
-          console.error("RS Insta: Cannot send feedback, runtime invalid."); // Error log
+          console.error("RS Insta: Cannot send feedback, runtime invalid.");
       }
       feedbackWrapper.innerHTML = `<p class="reelsense-feedback-thanks">Thanks!</p>`;
     });
@@ -280,7 +276,7 @@ function getFeedbackUI(features) {
 
 
 function showNudge(result) {
-  console.log("RS Insta: Showing Nudge"); // Log: Show UI
+  console.log("RS Insta: Showing Nudge");
   const overlay = createOverlay('nudge');
   const messages = {
      mindless_score: [ "You're scrolling on autopilot. Time to reset?" ],
@@ -289,7 +285,7 @@ function showNudge(result) {
   };
   const messageList = messages[result.reason] || messages.mindless_score;
   const message = messageList[Math.floor(Math.random() * messageList.length)];
-  const currentStats = analyzer ? analyzer.getStats() : { videosWatched: 'N/A', scrollSpeed: 'N/A' }; // Use videosWatched
+  const currentStats = analyzer ? analyzer.getStats() : { videosWatched: 'N/A', scrollSpeed: 'N/A' };
 
   overlay.innerHTML = `
     <div class="reelsense-nudge">
@@ -318,32 +314,30 @@ function showNudge(result) {
   document.body.classList.add('reelsense-active');
 
   document.getElementById('reelsense-continue-mindful').addEventListener('click', () => {
-      console.log("RS Insta: Nudge - Continue clicked"); // Log: Action
+      console.log("RS Insta: Nudge - Continue clicked");
       if (document.getElementById('reelsense-overlay') === overlay) overlay.remove();
       document.body.classList.remove('reelsense-active');
       isBlocked = false; if(analyzer) analyzer.resetSession();
   });
   document.getElementById('reelsense-take-break').addEventListener('click', () => {
-      console.log("RS Insta: Nudge - Take Break clicked"); // Log: Action
+      console.log("RS Insta: Nudge - Take Break clicked");
       if (document.getElementById('reelsense-overlay') === overlay) overlay.remove();
-      // --- FIX: Now calls showCountdown ---
       showCountdown();
   });
 }
 
-// --- REPLACED showBreathingExercise with showCountdown ---
 function showCountdown() {
   console.log("RS Insta: Showing Countdown");
-  const overlay = createOverlay('countdown'); // Use a new class
-  const duration = settings.countdownDuration || 30; // Get duration from settings
+  const overlay = createOverlay('countdown');
+  const duration = settings.countdownDuration || 30;
   let remaining = duration;
 
   overlay.innerHTML = `
     <div class="reelsense-countdown">
       <h2>Take a Break</h2>
       <p>Your session is paused. Take a moment to reset.</p>
-      <div class="reelsense-countdown-timer" id="reelsense-timer">${remaining}</div>
-      <button class="reelsense-btn" id="countdown-skip-btn">Skip</button>
+      <div class="reelsense-countdown-timer" id="reelsense-timer">${remaining}</div><br></br>
+      <button class="reelsense-btn secondary" id="countdown-skip-btn">Skip</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -351,7 +345,6 @@ function showCountdown() {
 
   const timerEl = document.getElementById('reelsense-timer');
 
-  // Cleanup function (to avoid repeating code)
   function cleanupCountdown() {
     clearInterval(timer);
     if (document.getElementById('reelsense-overlay') === overlay) {
@@ -363,7 +356,6 @@ function showCountdown() {
     console.log("RS Insta: Countdown ended or skipped.");
   }
 
-  // Timer logic
   const timer = setInterval(() => {
     remaining--;
     if (timerEl) timerEl.textContent = remaining;
@@ -373,16 +365,14 @@ function showCountdown() {
     }
   }, 1000);
 
-  // Skip button logic
   document.getElementById('countdown-skip-btn').addEventListener('click', cleanupCountdown);
 }
-// --- END OF REPLACEMENT ---
 
 
 function createOverlay(type) {
   const existingOverlay = document.getElementById('reelsense-overlay');
   if (existingOverlay) {
-      console.log("RS Insta: Removing existing overlay."); // Log: Cleanup
+      console.log("RS Insta: Removing existing overlay.");
       existingOverlay.remove();
   }
   const overlay = document.createElement('div');
@@ -395,22 +385,22 @@ function createOverlay(type) {
 function updateStats() {
     if (chrome.runtime?.id) {
         chrome.runtime.sendMessage({ action: 'updateStats', platform: 'instagram', data: { time: 5 } },
-          response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateTime):", chrome.runtime.lastError.message); }); // Error log
+          response => { if (chrome.runtime.lastError) console.error("RS Insta Err (updateTime):", chrome.runtime.lastError.message); });
     }
 }
 
 
 function observeNavigation() {
   let lastUrl = location.href;
-  console.log("RS Insta: Starting navigation observer. Initial URL:", lastUrl); // Log: Observer Start
+  console.log("RS Insta: Starting navigation observer. Initial URL:", lastUrl);
 
   navigationObserver = new MutationObserver(() => {
-      window.requestAnimationFrame(() => { // Debounce
+      window.requestAnimationFrame(() => {
         const currentUrl = location.href;
         if (currentUrl !== lastUrl) {
             const oldUrl = lastUrl;
             lastUrl = currentUrl;
-            console.log(`RS Insta: URL changed via MutationObserver from ${oldUrl} to ${currentUrl}`); // Log: URL Change
+            console.log(`RS Insta: URL changed via MutationObserver from ${oldUrl} to ${currentUrl}`);
 
             if (!isBlocked) {
                 const oldOverlay = document.getElementById('reelsense-overlay');
@@ -420,9 +410,9 @@ function observeNavigation() {
 
             if (isOnReelsPage()) {
                 console.log('RS Insta: Navigated within Reels context');
-                checkVideoChange(); // Let checkVideoChange handle video logic
+                checkVideoChange();
 
-                if (!analyzer) { console.log("RS Insta: Analyzer missing, re-initializing."); init(); } // Log: Re-init
+                if (!analyzer) { console.log("RS Insta: Analyzer missing, re-initializing."); init(); }
                 else { analyzer.resetSession(); }
             } else {
                 console.log('RS Insta: Navigated away from Reels');
@@ -436,10 +426,10 @@ function observeNavigation() {
   navigationObserver.observe(document.body, { subtree: true, childList: true });
 
     window.addEventListener('popstate', () => {
-        console.log('RS Insta: Popstate event detected'); // Log: Popstate
+        console.log('RS Insta: Popstate event detected');
         setTimeout(() => {
             lastUrl = document.location.href;
-            console.log("RS Insta: URL after popstate:", lastUrl); // Log: URL after popstate
+            console.log("RS Insta: URL after popstate:", lastUrl);
             
             if (!isBlocked) {
                 const oldOverlay = document.getElementById('reelsense-overlay');
@@ -449,7 +439,7 @@ function observeNavigation() {
 
             checkVideoChange();
             if (isOnReelsPage()) {
-                if (!analyzer) { console.log("RS Insta: Analyzer missing after popstate, re-initializing."); init(); } // Log: Re-init
+                if (!analyzer) { console.log("RS Insta: Analyzer missing after popstate, re-initializing."); init(); }
                 else { analyzer.resetSession(); }
             } else {
                 if(analyzer) analyzer.resetSession();
@@ -462,15 +452,14 @@ function observeNavigation() {
 if (chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === 'TRIGGER_INTERVENTION') {
-            console.log('RS Insta: Intervention remotely triggered by background.js (Ignoring)'); // Log: Remote trigger ignored for now
+            console.log('RS Insta: Intervention remotely triggered by background.js (Ignoring)');
         }
     });
 } else {
-    console.error("RS Insta: chrome.runtime.onMessage not available."); // Error log
+    console.error("RS Insta: chrome.runtime.onMessage not available.");
 }
 
 
-// --- BehaviorAnalyzer class ---
 class BehaviorAnalyzer {
     constructor(settings) {
         this.settings = settings || DEFAULT_SETTINGS;
@@ -700,5 +689,4 @@ class BehaviorAnalyzer {
     }
 }
 
-// Start the script
 init();

@@ -1,26 +1,20 @@
 import * as tf from '@tensorflow/tfjs';
-// The script will now start here and tf.js will use its default backend.
 
-// ReelSense Background Service Worker
-
-// --- Default Settings ---
 const DEFAULT_SETTINGS = {
   enabled: true,
-  mindlessThreshold: 70, 
+  mindlessThreshold: 50, 
   genreFatigueLimit: 15, 
   scrollSpeedThreshold: 5, 
   minWatchTime: 3,
   dailyLimit: 120, 
   showStats: true,
-  countdownDuration: 30 // --- ADDED ---
+  countdownDuration: 30
 };
 
-// --- Global Variables ---
-let tabSessions = {}; // Stores recent activity per tab for heuristic fallback
-let loadedModel = null; // Variable to hold the loaded AI model in memory
-const featureKeys = ['scrollSpeed', 'avgWatchTime', 'skipRate', 'genreDiversity', 'sessionMinutes']; // Order matters
+let tabSessions = {};
+let loadedModel = null;
+const featureKeys = ['scrollSpeed', 'avgWatchTime', 'skipRate', 'genreDiversity', 'sessionMinutes'];
 
-// --- Initialization and Alarms ---
 chrome.tabs.onRemoved.addListener((tabId) => {
   delete tabSessions[tabId];
   console.log(`Cleaned up session for closed tab: ${tabId}`);
@@ -28,18 +22,15 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('ReelSense installed/updated:', details.reason);
-  // Set default settings only on first install
   if (details.reason === 'install') {
       await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
-      await chrome.storage.local.set({ trainingData: [] }); // Initialize training data
+      await chrome.storage.local.set({ trainingData: [] });
   }
   await initializeDailyStats();
-  await loadModelFromStorage(); // Load model on install/update/startup
-  // Create or update the alarm
+  await loadModelFromStorage();
   chrome.alarms.create('dailyReset', { when: getNextMidnight(), periodInMinutes: 1440 });
 });
 
-// Attempt to load model when the service worker starts up
 loadModelFromStorage();
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -50,12 +41,12 @@ async function initializeDailyStats() {
     const today = new Date().toDateString();
     const stored = await chrome.storage.local.get(['dailyStats', 'lastStatsDate']);
 
-    if (stored.lastStatsDate !== today || !stored.dailyStats) { // Also initialize if stats are missing
+    if (stored.lastStatsDate !== today || !stored.dailyStats) {
         console.log("Initializing daily stats for", today);
         const newStats = {
         date: today,
-        instagram: { time: 0, videos: 0, interventions: 0 }, // Removed scrolls
-        youtube: { time: 0, videos: 0, interventions: 0 }, // Removed scrolls
+        instagram: { time: 0, videos: 0, interventions: 0 },
+        youtube: { time: 0, videos: 0, interventions: 0 },
         totalMindlessScore: 0,
         highestMindlessScore: 0
         };
@@ -64,7 +55,7 @@ async function initializeDailyStats() {
 }
 async function resetDailyStats() {
     console.log("Resetting daily stats via alarm.");
-    await initializeDailyStats(); // Re-initialize for the new day
+    await initializeDailyStats();
 }
 function getNextMidnight() {
     const tomorrow = new Date();
@@ -73,11 +64,9 @@ function getNextMidnight() {
     return tomorrow.getTime();
 }
 
-// --- Message Handling ---
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('ReelSense: Message received in background!', request.action); // --- ADDED FOR DEBUGGING ---
+  console.log('ReelSense: Message received in background!', request.action);
 
-  // Use a switch for better organization
   switch (request.action) {
     case 'TRAIN_MODEL':
       console.log('ReelSense: Manual training trigger received.');
@@ -87,28 +76,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           console.error('ReelSense: Training failed', err);
           sendResponse({ success: false, error: err.message });
         });
-      return true; // Indicate async response will be sent
+      return true;
 
     case 'logTrainingData':
       logTrainingData(request.features, request.label).then((newDataLength) => {
         sendResponse({ success: true });
-        // Auto-train more frequently after an initial amount
         if (newDataLength > 30 && newDataLength % 5 === 0) {
           console.log(`ReelSense: Auto-training model at ${newDataLength} samples.`);
-          // Don't wait for training, let it run in the background
           trainModel().catch(err => console.error("Auto-train failed:", err));
         }
-      }).catch(err => { // Catch errors during logging
+      }).catch(err => {
           console.error("Error logging training data:", err);
           sendResponse({ success: false, error: "Failed to log data"});
       });
-      return true; // Indicate async response
+      return true;
 
     case 'PREDICT_BEHAVIOR':
       if (!loadedModel) {
         console.log("Prediction requested, but model not loaded.");
         sendResponse({ success: false, error: "Model not loaded" });
-        return false; // No model, no async response needed
+        return false;
       }
       try {
         const prediction = predictBehavior(request.features);
@@ -117,7 +104,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.error("Prediction error:", error);
         sendResponse({ success: false, error: error.message });
       }
-      // tf.tidy ensures synchronous execution here
       return false;
 
     case 'updateStats':
@@ -127,51 +113,46 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.error("Error updating stats:", err);
             sendResponse({ success: false, error: "Failed to update stats"});
         });
-      return true; // Indicate async response
+      return true;
 
     case 'getSettings':
       chrome.storage.local.get('settings')
         .then(result => sendResponse(result.settings || DEFAULT_SETTINGS))
         .catch(err => {
             console.error("Error getting settings:", err);
-            sendResponse(DEFAULT_SETTINGS); // Send defaults on error
+            sendResponse(DEFAULT_SETTINGS);
         });
-      return true; // Indicate async response
+      return true;
 
     case 'recordIntervention':
-      console.log('ReelSense: recordIntervention message received!'); // --- ADDED FOR DEBUGGING ---
+      console.log('ReelSense: recordIntervention message received!');
       recordIntervention(request.platform, request.type)
         .then(() => sendResponse({ success: true }))
         .catch(err => {
             console.error("Error recording intervention:", err);
             sendResponse({ success: false, error: "Failed to record intervention"});
         });
-      return true; // Indicate async response
+      return true;
 
     default:
       console.log("Unknown action received:", request.action);
       sendResponse({ success: false, error: "Unknown action" });
-      return false; // No async response for unknown actions
+      return false;
   }
 });
 
-// --- Data Logging ---
 async function logTrainingData(features, label) {
     try {
-    // Ensure we retrieve existing data correctly
     const result = await chrome.storage.local.get('trainingData');
     const data = result.trainingData || [];
 
-    // Basic validation of received data
     if(typeof features !== 'object' || typeof label !== 'number' || label < 0 || label > 1) {
         console.warn("Invalid training data received:", {features, label});
-        return data.length; // Return current length without adding invalid data
+        return data.length;
     }
-    // Ensure all required features are present and are numbers
       const validFeatures = featureKeys.every(key => typeof features[key] === 'number' && Number.isFinite(features[key]));
       if (!validFeatures) {
           console.warn("Invalid features received:", features);
-          // Optionally try to clean features or just reject
           return data.length;
       }
 
@@ -179,40 +160,31 @@ async function logTrainingData(features, label) {
     const newSample = { features, label };
     data.push(newSample);
 
-    // Limit the size of stored training data (e.g., last 500 samples)
     const MAX_SAMPLES = 500;
     if (data.length > MAX_SAMPLES) {
-        data.splice(0, data.length - MAX_SAMPLES); // Remove oldest samples
+        data.splice(0, data.length - MAX_SAMPLES);
     }
 
     await chrome.storage.local.set({ trainingData: data });
     console.log(`Logged sample ${data.length}: L=${label} F=${JSON.stringify(features)}`);
-    return data.length; // Return new length
+    return data.length;
   } catch (error) {
       console.error('Error logging training data:', error);
-      // Attempt to get length even if save failed
       const result = await chrome.storage.local.get('trainingData');
       return result.trainingData?.length || 0;
   }
 }
 
-// --- AI Model Prediction Function ---
 function predictBehavior(features) {
     if (!loadedModel) throw new Error("Model not loaded for prediction.");
-    // console.log("Predicting with features:", features); // Can be verbose
 
-    // Ensure features are in the correct order and are numbers, handle potential missing keys
     const inputVector = featureKeys.map(key => Number(features[key]) || 0);
 
-    // Validate input vector for NaNs or Infinity
       if (inputVector.some(val => !Number.isFinite(val))) {
         console.error("Invalid feature vector contains non-finite values:", inputVector, "Original features:", features);
-        // Attempt to recover by replacing non-finite with 0, or throw error
-        // For now, let's replace and log a warning
         const cleanedVector = inputVector.map(v => Number.isFinite(v) ? v : 0);
         console.warn("Using cleaned vector:", cleanedVector);
-        // throw new Error("Invalid feature vector for prediction."); // Stricter option
-        inputVector = cleanedVector; // Use cleaned vector if recovery is desired
+        inputVector = cleanedVector;
     }
 
 
@@ -222,7 +194,7 @@ function predictBehavior(features) {
             const result = loadedModel.predict(inputTensor);
             if (result instanceof tf.Tensor) {
                 const predictionValue = result.dataSync()[0];
-                result.dispose(); // Dispose tensor immediately after getting data
+                result.dispose();
                 return predictionValue;
             } else {
                 console.error("Prediction result was not a Tensor:", result);
@@ -230,15 +202,13 @@ function predictBehavior(features) {
             }
         } catch (predError) {
             console.error("Error during prediction inside tf.tidy:", predError);
-            throw predError; // Re-throw to be caught by outer try-catch
+            throw predError;
         }
     });
-    // console.log("Prediction score:", prediction); // Can be verbose
     return prediction;
 }
 
 
-// --- AI Model Training Function ---
 async function trainModel() {
   console.log('ReelSense: Starting model training...');
   const result = await chrome.storage.local.get('trainingData');
@@ -248,7 +218,6 @@ async function trainModel() {
     throw new Error(`Not enough training data (${trainingData?.length || 0}/20). Keep using the extension!`);
   }
 
-  // Filter out potentially corrupted data (important!)
   const validData = trainingData.filter(d =>
       d && typeof d.label === 'number' && typeof d.features === 'object' &&
       featureKeys.every(key => typeof d.features[key] === 'number' && Number.isFinite(d.features[key]))
@@ -266,55 +235,46 @@ async function trainModel() {
   const inputTensor = tf.tensor2d(inputs);
   const labelTensor = tf.tensor2d(labels, [labels.length, 1]);
 
-  // Define model architecture (simple MLP)
   const model = tf.sequential();
-  model.add(tf.layers.dense({ inputShape: [featureKeys.length], units: 10, activation: 'relu' })); // Slightly larger hidden layer
-  model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' })); // Output layer for binary classification
+  model.add(tf.layers.dense({ inputShape: [featureKeys.length], units: 10, activation: 'relu' }));
+  model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
 
   model.compile({
-      optimizer: tf.train.adam(0.001), // Adam optimizer with a learning rate
+      optimizer: tf.train.adam(0.001),
       loss: 'binaryCrossentropy',
       metrics: ['accuracy']
   });
 
   console.log(`Training on ${validData.length} valid samples...`);
   const history = await model.fit(inputTensor, labelTensor, {
-    epochs: 30, // Increase epochs slightly
-    batchSize: 16, // Use mini-batches
+    epochs: 30,
+    batchSize: 16,
     shuffle: true,
-    validationSplit: 0.2, // Use 20% for validation
+    validationSplit: 0.2,
     callbacks: {
         onEpochEnd: (epoch, logs) => console.log(`Epoch ${epoch + 1}/${30}: loss=${logs.loss.toFixed(3)}, acc=${logs.acc.toFixed(3)}, val_loss=${logs.val_loss.toFixed(3)}, val_acc=${logs.val_acc.toFixed(3)}`),
-        // Optional: Early stopping if validation loss doesn't improve
-        // tf.callbacks.earlyStopping({ monitor: 'val_loss', patience: 5 })
       }
   });
   console.log("Training history:", history.history);
 
 
-  // Save the newly trained model (overwrites previous)
   await saveModelToStorage(model);
 
-  // Update the globally loaded model ONLY if training was successful
   loadedModel = model;
 
   console.log('ReelSense: Model trained and saved successfully.');
 
-  // Explicitly dispose tensors (model itself is kept in loadedModel)
   inputTensor.dispose();
   labelTensor.dispose();
 }
 
-// --- Functions to save/load model artifacts using chrome.storage ---
 async function saveModelToStorage(model) {
   try {
-    // This handler extracts the JSON-serializable artifacts
     const saveResult = await model.save(tf.io.withSaveHandler(async (artifacts) => artifacts));
     await chrome.storage.local.set({ 'reelsense-model-artifacts': saveResult });
     console.log("Model artifacts saved to chrome.storage.local");
   } catch (error) {
     console.error("Error saving model:", error);
-    // Consider how to handle save errors (e.g., notify user, retry?)
   }
 }
 
@@ -323,17 +283,15 @@ async function loadModelFromStorage() {
     const result = await chrome.storage.local.get('reelsense-model-artifacts');
     const modelArtifacts = result['reelsense-model-artifacts'];
 
-    if (modelArtifacts && modelArtifacts.modelTopology && modelArtifacts.weightData) { // Basic check
-        // Reconstruct the model using tf.loadLayersModel with a custom IO handler
+    if (modelArtifacts && modelArtifacts.modelTopology && modelArtifacts.weightData) {
         const loaded = await tf.loadLayersModel(tf.io.fromMemory(
             modelArtifacts.modelTopology,
             modelArtifacts.weightSpecs,
             modelArtifacts.weightData
         ));
-        loadedModel = loaded; // Assign to global variable
+        loadedModel = loaded;
         console.log('ReelSense: AI Model loaded from chrome.storage.local.');
 
-        // Optional: Warm up the model by making a dummy prediction
         if (loadedModel) {
             tf.tidy(() => { loadedModel.predict(tf.zeros([1, featureKeys.length])); });
             console.log("Model warmed up.");
@@ -344,24 +302,21 @@ async function loadModelFromStorage() {
     }
   } catch (error) {
     console.error("Error loading model from storage:", error);
-    loadedModel = null; // Ensure model is null if loading fails
-    // Optionally clear potentially corrupted data
+    loadedModel = null;
     console.log("Clearing potentially corrupted model data from storage.");
     await chrome.storage.local.remove('reelsense-model-artifacts');
   }
 }
 
-// --- Stat Update Functions ---
 async function updateDailyStats(platform, data) {
     try {
-        await initializeDailyStats(); // Ensure stats are initialized for the day
+        await initializeDailyStats();
         const result = await chrome.storage.local.get('dailyStats');
         const stats = result.dailyStats;
 
         if (stats && stats[platform]) {
             if (data.time) stats[platform].time = (stats[platform].time || 0) + data.time;
-            // Removed scrolls update
-            if (data.videos) stats[platform].videos = (stats[platform].videos || 0) + data.videos; // Represents reels/shorts scrolled
+            if (data.videos) stats[platform].videos = (stats[platform].videos || 0) + data.videos;
             if (data.mindlessScore) {
             stats.totalMindlessScore = (stats.totalMindlessScore || 0) + data.mindlessScore;
             stats.highestMindlessScore = Math.max(stats.highestMindlessScore || 0, data.mindlessScore);

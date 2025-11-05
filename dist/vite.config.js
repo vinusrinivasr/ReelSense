@@ -14,11 +14,9 @@ export default defineConfig({
         popup: 'popup/index.html',
       },
       output: {
-        // Ensure TensorFlow.js is bundled properly
         manualChunks: undefined,
       },
     },
-    // Increase chunk size limit for TensorFlow.js
     chunkSizeWarningLimit: 2000,
   },
   server: {
@@ -28,10 +26,8 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    // Include TensorFlow.js in optimization
     include: ['@tensorflow/tfjs'],
   },
-  // Fix for Chrome extension CSP
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
   }
